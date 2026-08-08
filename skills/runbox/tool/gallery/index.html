@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run Box</title>
+<style>
+  /* ------------------------------------------------------------------------
+     Deliberately pre-2015. Skeuomorphic hi-fi component: brushed graphite
+     chassis, amber VFD readout, Aqua gel transport, Cover Flow carousel with
+     mirror reflections. No flat fills anywhere, every surface has a gradient
+     and a bevel, affordances are visible.
+
+     Single committed finish by design; a machine has one. This is a locked
+     constraint on the shipped gallery, not decoration carried over from a
+     prototype.
+     ------------------------------------------------------------------------ */
+  :root {
+    --amber:      #FFB000;
+    --amber-dim:  #7A5200;
+    --screen-bg:  #0A0B09;
+    --ink:        #E8E8EE;
+    --engrave:    #9A9AA6;
+    --engrave-lo: #6E6E7A;
+    --warn:       #FF6B4A;
+    --good:       #6BE3A8;
+    --slotA:      #6BE3A8;
+    --slotB:      #FFC24D;
+    --ui: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", Tahoma, Verdana, sans-serif;
+    --led: "Consolas", "Lucida Console", "DejaVu Sans Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at 50% 0%, #2E2E36 0%, #191920 55%, #0E0E12 100%);
+    color: var(--ink); font-family: var(--ui); font-size: 13px; line-height: 1.45;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 26px 16px 54px; }
+
+  .cabinet {
+    position: relative; border-radius: 9px; padding: 16px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.030) 0 1px, rgba(0,0,0,.02) 1px 3px),
+      linear-gradient(180deg, #55555E 0%, #3C3C44 42%, #2F2F36 52%, #23232A 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.30), inset 0 -2px 2px rgba(0,0,0,.55),
+      inset 2px 0 3px rgba(0,0,0,.30), inset -2px 0 3px rgba(0,0,0,.30),
+      0 10px 26px rgba(0,0,0,.62), 0 2px 0 rgba(255,255,255,.05);
+    border: 1px solid #14141A;
+  }
+  .cabinet + .cabinet { margin-top: 18px; }
+  .screw {
+    position: absolute; width: 11px; height: 11px; border-radius: 50%;
+    background: linear-gradient(180deg, #8B8B95 0%, #55555E 55%, #3A3A42 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 2px rgba(0,0,0,.7);
+  }
+  .screw::after {
+    content: ""; position: absolute; left: 2px; right: 2px; top: 4.6px; height: 1.6px;
+    background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(255,255,255,.18));
+    border-radius: 1px; transform: rotate(38deg);
+  }
+  .screw.tl { top: 7px; left: 7px; } .screw.tr { top: 7px; right: 7px; }
+  .screw.bl { bottom: 7px; left: 7px; } .screw.br { bottom: 7px; right: 7px; }
+
+  .nameplate {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+    flex-wrap: wrap; padding: 4px 16px 13px; margin-bottom: 13px;
+    border-bottom: 1px solid rgba(0,0,0,.55); box-shadow: 0 1px 0 rgba(255,255,255,.09);
+  }
+  .nameplate h1 {
+    margin: 0; font-size: 25px; font-weight: 700; color: #DCDCE4;
+    text-shadow: 0 1px 0 rgba(255,255,255,.18), 0 -1px 1px rgba(0,0,0,.75);
+  }
+  .model, .plate-right {
+    font-family: var(--led); font-size: 10px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--engrave-lo); margin: 0 0 3px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.13), 0 -1px 0 rgba(0,0,0,.6);
+  }
+  .plate-right { text-align: right; letter-spacing: .13em; color: var(--engrave); }
+  .label {
+    font-family: var(--led); font-size: 9px; letter-spacing: .26em; text-transform: uppercase;
+    color: var(--engrave-lo); margin: 0 0 8px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.13), 0 -1px 0 rgba(0,0,0,.6);
+  }
+  .well {
+    border-radius: 6px; padding: 12px;
+    background: linear-gradient(180deg, #17171C 0%, #1D1D23 100%);
+    box-shadow: inset 0 3px 7px rgba(0,0,0,.85), inset 0 -1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.10);
+    border: 1px solid #0D0D11;
+  }
+
+  .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .slots { grid-template-columns: 1fr; } }
+  .slot {
+    border-radius: 5px; overflow: hidden;
+    background: linear-gradient(180deg, #43434B, #2C2C33);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 5px rgba(0,0,0,.55);
+    border: 1px solid #101015;
+  }
+  .slot-head {
+    display: flex; align-items: center; gap: 7px; padding: 6px 9px;
+    background: linear-gradient(180deg, #4E4E57 0%, #3A3A42 50%, #33333A 100%);
+    border-bottom: 1px solid #101015; box-shadow: inset 0 1px 0 rgba(255,255,255,.24);
+    font-family: var(--led); font-size: 11px;
+  }
+  .badge {
+    width: 19px; height: 19px; flex: none; border-radius: 3px; display: grid; place-items: center;
+    font-weight: 700; font-size: 11px; color: #13160F;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 1px 2px rgba(0,0,0,.6);
+  }
+  .a .badge { background: linear-gradient(180deg, #A8F5CE, var(--slotA)); }
+  .b .badge { background: linear-gradient(180deg, #FFE0A0, var(--slotB)); }
+  .slot-head .nm { font-weight: 700; color: #E4E4EC; text-shadow: 0 -1px 0 rgba(0,0,0,.6); }
+  .slot-head .vel { margin-left: auto; color: var(--engrave); }
+  .eject {
+    width: 18px; height: 18px; padding: 0; border-radius: 3px; flex: none; font-size: 12px;
+    line-height: 1; color: #DADAE2; cursor: pointer;
+    background: linear-gradient(180deg, #5A5A64, #3B3B43); border: 1px solid #17171C;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .eject:hover { color: var(--warn); }
+  .glass { position: relative; background: var(--screen-bg); }
+  .glass::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(168deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.04) 34%, rgba(255,255,255,0) 56%);
+    box-shadow: inset 0 0 26px rgba(0,0,0,.75);
+  }
+  .glass video { display: block; width: 100%; height: auto; background: var(--screen-bg); }
+  .slot-empty {
+    aspect-ratio: 16/9; display: grid; place-content: center; gap: 5px; text-align: center;
+    font-family: var(--led); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber-dim);
+  }
+  .slot-empty b { font-size: 26px; color: #5C4410; }
+
+  .delta { margin-top: 12px; border-radius: 5px; overflow-x: auto;
+    background: linear-gradient(180deg, #0D0F0C, #131510);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.85); border: 1px solid #0A0B09; }
+  .delta table { width: 100%; border-collapse: collapse; font-family: var(--led); font-size: 12px; }
+  .delta th, .delta td { padding: 6px 11px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .delta th { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; font-weight: 400;
+    color: var(--amber-dim); background: linear-gradient(180deg, #1A1C16, #121410); border-bottom: 1px solid #000; }
+  .delta th:first-child, .delta td:first-child { text-align: left; }
+  .delta td { color: var(--amber); text-shadow: 0 0 5px rgba(255,176,0,.5); }
+  .delta td:first-child { color: var(--amber-dim); text-shadow: none; }
+  .delta tbody tr + tr td { border-top: 1px solid rgba(255,176,0,.09); }
+  .delta .va { color: var(--slotA); text-shadow: 0 0 5px rgba(107,227,168,.45); }
+  .delta .vb { color: var(--slotB); text-shadow: 0 0 5px rgba(255,194,77,.45); }
+  .delta .empty { text-align: center; padding: 13px; color: var(--amber-dim); text-shadow: none; }
+
+  .transport { margin-top: 13px; }
+  .controls { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
+  button {
+    position: relative; font-family: var(--ui); font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    color: #F2F2F6; cursor: pointer; padding: 7px 13px; border-radius: 13px; border: 1px solid #101015;
+    background: linear-gradient(180deg, #6A6A75 0%, #4A4A54 47%, #3D3D46 53%, #2C2C34 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.40), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.5);
+    text-shadow: 0 -1px 0 rgba(0,0,0,.65);
+  }
+  button::after {
+    content: ""; position: absolute; left: 3px; right: 3px; top: 1px; height: 42%;
+    border-radius: 11px 11px 60% 60% / 11px 11px 100% 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.04)); pointer-events: none;
+  }
+  button:active:not(:disabled) {
+    background: linear-gradient(180deg, #2C2C34 0%, #3D3D46 47%, #4A4A54 53%, #5A5A65 100%);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,.7);
+  }
+  button:disabled { opacity: .40; cursor: default; }
+  button:focus-visible, .groove:focus-visible, .flow:focus-visible { outline: 2px solid #7CC7FF; outline-offset: 2px; }
+  button.primary {
+    min-width: 82px; color: #FFF; border-color: #0E3D6B;
+    background: linear-gradient(180deg, #8FD4FA 0%, #4FA0E4 46%, #2C79C9 54%, #1C5DA8 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.75), inset 0 -1px 0 rgba(0,0,0,.35),
+                0 2px 5px rgba(0,0,0,.5), 0 0 11px rgba(66,150,230,.34);
+  }
+  button.primary:active { background: linear-gradient(180deg, #1C5DA8 0%, #2C79C9 46%, #4FA0E4 54%, #8FD4FA 100%); }
+  button.mark { border-color: #6A4B00; background: linear-gradient(180deg, #FFDE9A 0%, #FFB93F 46%, #E39400 54%, #B87500 100%); color: #2A1C00; }
+  button.mark[aria-pressed="true"] { box-shadow: inset 0 2px 5px rgba(0,0,0,.55), 0 0 12px rgba(255,176,0,.55); }
+
+  .vfd {
+    margin-left: auto; display: flex; align-items: baseline; gap: 7px; padding: 5px 12px; border-radius: 4px;
+    background: linear-gradient(180deg, #0B0C0A, #141610);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.10);
+    border: 1px solid #080906; font-family: var(--led); font-variant-numeric: tabular-nums;
+  }
+  .vfd .cap { font-size: 8px; letter-spacing: .24em; text-transform: uppercase; color: var(--amber-dim); }
+  .vfd .n { font-size: 19px; font-weight: 700; color: var(--amber); text-shadow: 0 0 7px rgba(255,176,0,.85), 0 0 20px rgba(255,130,0,.42); }
+  .vfd .of { font-size: 11px; color: var(--amber-dim); }
+
+  .groove {
+    position: relative; height: 26px; cursor: pointer; border-radius: 13px;
+    background: linear-gradient(180deg, #101014 0%, #1B1B21 60%, #26262D 100%);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,.9), inset 0 -1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(255,255,255,.09);
+    border: 1px solid #0A0A0E;
+  }
+  .groove-fill { position: absolute; top: 2px; bottom: 2px; left: 2px; border-radius: 11px;
+    background: linear-gradient(180deg, rgba(255,176,0,.30), rgba(255,120,0,.10));
+    box-shadow: inset 0 1px 0 rgba(255,200,80,.30); pointer-events: none; }
+  .knob {
+    position: absolute; top: -3px; width: 15px; height: 30px; margin-left: -7.5px; border-radius: 4px; pointer-events: none;
+    background: linear-gradient(180deg, #E4E4EA 0%, #A8A8B2 44%, #7C7C86 52%, #C4C4CC 100%);
+    box-shadow: 0 1px 4px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.85); border: 1px solid #4A4A52;
+  }
+  .knob::after { content: ""; position: absolute; left: 6px; top: 8px; width: 1px; height: 13px;
+    background: rgba(0,0,0,.35); box-shadow: 2px 0 0 rgba(0,0,0,.35), -2px 0 0 rgba(0,0,0,.35); }
+  .marker { position: absolute; width: 3px; height: 10px; border-radius: 1px; transform: translateX(-1px); cursor: pointer; z-index: 3; }
+  .marker.land { opacity: .55; }
+  .legend { display: flex; gap: 13px; margin-top: 6px; font-family: var(--led); font-size: 9px;
+    letter-spacing: .12em; color: var(--engrave-lo); text-transform: uppercase;
+    text-shadow: 0 1px 0 rgba(255,255,255,.09); flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 3px; height: 8px; background: var(--engrave); margin-right: 5px; vertical-align: -1px; }
+  .legend .l2 { opacity: .55; }
+
+  .deck { display: flex; align-items: center; gap: 10px; }
+  .spin { flex: none; width: 42px; height: 42px; border-radius: 50%; padding: 0; font-size: 14px; display: grid; place-items: center; }
+  .spin::after { border-radius: 50%; left: 4px; right: 4px; }
+  .flow { position: relative; flex: 1; min-width: 0; height: 250px; perspective: 760px; perspective-origin: 50% 42%; overflow: hidden; }
+  .card {
+    position: absolute; top: 14px; left: 50%; width: 190px; transform-style: preserve-3d;
+    transition: transform .42s cubic-bezier(.25,.8,.35,1), opacity .42s; will-change: transform, opacity;
+  }
+  .cardbtn {
+    display: block; width: 100%; padding: 0; border-radius: 4px; overflow: hidden; cursor: pointer;
+    border: 1px solid #0C0C10; background: linear-gradient(180deg, #45454E, #2A2A31);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 5px 14px rgba(0,0,0,.7);
+    -webkit-box-reflect: below 3px linear-gradient(transparent 58%, rgba(255,255,255,.26));
+  }
+  .cardbtn::after { display: none; }
+  .cardbtn video, .cardbtn .noclip { display: block; width: 100%; height: 107px; object-fit: cover; background: var(--screen-bg); }
+  .cardbtn .noclip { display: grid; place-items: center; font-family: var(--led); font-size: 9px;
+    letter-spacing: .18em; color: var(--amber-dim); text-transform: uppercase; }
+  .cardmeta {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-family: var(--led); font-size: 10px;
+    background: linear-gradient(180deg, #4A4A54, #33333B); border-top: 1px solid #0C0C10;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .cardmeta .lbl { font-weight: 700; color: #E6E6EE; text-shadow: 0 -1px 0 rgba(0,0,0,.55); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cardmeta .st { width: 7px; height: 7px; border-radius: 50%; flex: none; box-shadow: 0 0 5px currentColor; }
+  .cardmeta .in { margin-left: auto; width: 15px; height: 15px; border-radius: 2px; display: grid; place-items: center;
+    font-size: 9px; font-weight: 700; color: #13160F; }
+
+  .caption {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    margin-top: 11px; padding: 7px 12px; border-radius: 4px;
+    background: linear-gradient(180deg, #0B0C0A, #141610);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.09);
+    border: 1px solid #080906; font-family: var(--led); font-size: 11px; color: var(--amber-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .caption b { color: var(--amber); text-shadow: 0 0 6px rgba(255,176,0,.6); font-weight: 700; }
+  .caption .sep { color: #4A3A12; }
+  .caption .ok { color: var(--good); }
+  .caption .bad { color: var(--warn); }
+  .hint { margin: 10px 0 0; text-align: center; font-family: var(--led); font-size: 9px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--engrave-lo); text-shadow: 0 1px 0 rgba(255,255,255,.09); }
+  .boot { padding: 40px; text-align: center; font-family: var(--led); font-size: 11px; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--amber-dim); }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cabinet">
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+    <div class="nameplate">
+      <div><p class="model">Prototype Mill &middot; Model RB-1</p><h1>Run Box</h1></div>
+      <div class="plate-right" id="sub">scanning&hellip;</div>
+    </div>
+
+    <p class="label">Diff Bay</p>
+    <div class="well">
+      <div class="slots">
+        <div class="slot a" id="slotA" data-filled="false"></div>
+        <div class="slot b" id="slotB" data-filled="false"></div>
+      </div>
+      <div class="delta" id="delta"></div>
+      <div class="transport">
+        <div class="controls">
+          <button class="primary" id="play" type="button">PLAY</button>
+          <button id="back10" type="button">&#171; 10</button>
+          <button id="back1" type="button">&#8249; 1</button>
+          <button id="fwd1" type="button">1 &#8250;</button>
+          <button id="fwd10" type="button">10 &#187;</button>
+          <button id="swap" type="button">SWAP</button>
+          <button class="mark" id="markA" type="button" aria-pressed="false">MARK A</button>
+          <button class="mark" id="markB" type="button" aria-pressed="false">MARK B</button>
+          <span class="vfd"><span class="cap">Frame</span><span class="n" id="fnum">000</span><span class="of">/ <span id="fmax">000</span></span></span>
+        </div>
+        <div class="groove" id="track" tabindex="0" role="slider" aria-label="Frame position" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0">
+          <div class="groove-fill" id="fill"></div>
+          <div class="knob" id="playhead"></div>
+        </div>
+        <!-- Populated from whatever event kinds the loaded runs actually contain. -->
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cabinet">
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+    <p class="label" style="padding-left:4px">Carousel</p>
+    <div class="well">
+      <div class="deck">
+        <button class="spin" id="prev" type="button" aria-label="Previous run">&#9664;</button>
+        <div class="flow" id="stage" tabindex="0" role="listbox" aria-label="Runs"><div class="boot">Loading runs&hellip;</div></div>
+        <button class="spin" id="next" type="button" aria-label="Next run">&#9654;</button>
+      </div>
+      <div class="caption" id="caption"></div>
+    </div>
+    <p class="hint">Click a cover to load it &middot; arrows or scroll to spin &middot; A / B loads the centre cover &middot; L launches &middot; space plays</p>
+  </div>
+</div>
+<script src="/gallery.js"></script>
+</body>
+</html>
