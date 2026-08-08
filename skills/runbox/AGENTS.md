@@ -1,5 +1,12 @@
 # Working on runbox itself
 
+> **Scope: the runbox repository only.**
+>
+> This file governs an agent developing runbox. It is **not** installed into
+> projects that consume the skill, and `package.ps1` deliberately excludes it. If
+> you are reading this inside a game project, something copied more than the
+> deliverable and you should ignore this file entirely.
+
 Instructions for an agent **maintaining** runbox. If you are *using* runbox to
 iterate on a game, read `SKILL.md` instead; this file will mislead you.
 
