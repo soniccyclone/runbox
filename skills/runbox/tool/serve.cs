@@ -568,9 +568,12 @@ static class Launcher
                 FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
                 UseShellExecute = false,
                 WorkingDirectory = gameDir,
+                // Raw Arguments, NOT ArgumentList. ArgumentList quotes each entry,
+                // producing cmd /c "mkdir C:\path", and cmd then tries to read that
+                // quoted string as an executable name and does nothing. Here the
+                // shell is supposed to parse the command, so it must arrive unquoted.
+                Arguments = "/c " + cmd,
             };
-            shell.ArgumentList.Add("/c");
-            shell.ArgumentList.Add(cmd);
             return Process.Start(shell);
         }
         return StartGodot(gameDir);

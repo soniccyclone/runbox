@@ -41,8 +41,16 @@ function Get-RepoRoot {
     return $d
 }
 
-$root = if ($OutRootOverride) { $OutRootOverride } else { Get-RepoRoot }
-$outRoot = Join-Path $root '.harness-out'
+# OutRootOverride names the RUN TREE directly, not a repo containing one, so a
+# caller with runs somewhere unusual (a test fixture, a scratch capture) does not
+# have to fabricate a .harness-out beneath it.
+if ($OutRootOverride) {
+    $outRoot = $OutRootOverride
+    $root = Split-Path -Parent $OutRootOverride
+} else {
+    $root = Get-RepoRoot
+    $outRoot = Join-Path $root '.harness-out'
+}
 $galleryDir = Join-Path $PSScriptRoot 'gallery'   # assets sit beside this script
 if (-not $Out) { $Out = Join-Path $root 'run-box-export.html' }
 

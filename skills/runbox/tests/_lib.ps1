@@ -62,8 +62,12 @@ function Start-RunboxServer {
     $serve = Join-Path (Get-ToolDir) 'serve.cs'
     if (-not (Test-Path $serve)) { throw "no serve.cs at $serve" }
 
-    $a = @('run', $serve, '--', '--port', $Port, '--root', $Root)
-    if ($Launch) { $a += @('--launch', $Launch) }
+    # MEASURED: PowerShell 5.1's Start-Process -ArgumentList joins the array with
+    # spaces and does NOT quote elements that contain them. An unquoted launch
+    # template splits into separate tokens, so the service received "mkdir" and
+    # silently launched nothing. Quote anything with spaces here, not later.
+    $a = @('run', "`"$serve`"", '--', '--port', $Port, '--root', "`"$Root`"")
+    if ($Launch) { $a += @('--launch', "`"$Launch`"") }
 
     $p = Start-Process dotnet -ArgumentList $a -PassThru -WindowStyle Hidden
     $base = "http://127.0.0.1:$Port"
