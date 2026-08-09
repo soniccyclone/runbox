@@ -35,23 +35,9 @@ function Get-RepoRoot {
 }
 
 $root = Get-RepoRoot
-
-# Run inside the runbox repo, Get-RepoRoot finds runbox's own root and this would
-# install the skill into its own source tree. The workshop is what identifies it:
-# a consuming project has the deliverable and none of this.
-if ((Test-Path (Join-Path $root 'test.ps1')) -and
-    (Test-Path (Join-Path $root 'skills\runbox\SKILL.md'))) {
-    throw "this is the runbox repo. The installer belongs in the project you want to instrument: copy skills\runbox into <target>\.claude\skills\runbox and run it from there."
-}
-
 $tool = Join-Path $PSScriptRoot 'tool'
 $harness = Join-Path $root 'harness'
 $wrapper = Join-Path $harness 'serve.ps1'
-
-# The wrapper has to reach serve.cs from the repo root at runtime. Derive that from
-# where this script actually sits rather than assuming .claude\skills\runbox, so a
-# skill installed under a different name still produces a wrapper that works.
-$toolRel = $tool.Substring($root.Length).TrimStart('\', '/')
 
 Write-Output "runbox -> $root"
 Write-Output ""
@@ -84,7 +70,7 @@ param([int]`$Port = $Port, [string]`$Launch = '$Launch')
 
 `$ErrorActionPreference = 'Stop'
 `$root = Split-Path -Parent `$PSScriptRoot
-`$serve = Join-Path `$root '$toolRel\serve.cs'
+`$serve = Join-Path `$root '.claude\skills\runbox\tool\serve.cs'
 
 `$serveArgs = @('run', `$serve, '--', '--port', `$Port, '--root', `$root)
 if (`$Launch) { `$serveArgs += @('--launch', `$Launch) }
@@ -97,26 +83,14 @@ Write-Output "runbox on http://127.0.0.1:`$Port/"
 }
 
 # ---- gitignore ------------------------------------------------------------
-# Written, not warned about. Run output is large, regenerable and produced on every
-# capture, so the gap between "you should ignore this" and actually ignoring it is
-# one commit full of clips.
 $gi = Join-Path $root '.gitignore'
 $needed = @('.harness-out/', '.harness-verdicts.json')
-
-# MEASURED: Get-Content -Raw decodes a BOM-less file with the system ANSI codepage
-# and Set-Content -Encoding utf8 writes a BOM, so both corrupt a round trip on 5.1.
-$enc = New-Object System.Text.UTF8Encoding($false)
-$text = if (Test-Path $gi) { [System.IO.File]::ReadAllText($gi) } else { '' }
-$missing = @($needed | Where-Object { $text -notlike "*$_*" })
-
-if (-not $missing) {
-    Write-Output "[+] .gitignore already covers run output and verdicts"
-}
-else {
-    $add = "`r`n# runbox: run output and verdicts`r`n" + ($missing -join "`r`n") + "`r`n"
-    if ($text -and -not $text.EndsWith("`n")) { $add = "`r`n" + $add }
-    [System.IO.File]::WriteAllText($gi, $text + $add, $enc)
-    Write-Output "[+] .gitignore: added $($missing -join ', ')"
+if (Test-Path $gi) {
+    $text = [System.IO.File]::ReadAllText($gi)
+    $missing = $needed | Where-Object { $text -notlike "*$_*" }
+    if ($missing) {
+        Write-Output "[!] add to .gitignore: $($missing -join ', ')"
+    } else { Write-Output "[+] .gitignore already covers run output and verdicts" }
 }
 
 # ---- what the project still owes ------------------------------------------
@@ -135,4 +109,4 @@ else {
     Write-Output "  Determinism first: fixed tick, seeded RNG, recorded input. Without all"
     Write-Output "  three, frame-locked comparison is meaningless."
 }
-Write-Output "  .\$toolRel\export.ps1   bake one self-contained file"
+Write-Output "  .\.claude\skills\runbox\tool\export.ps1   bake one self-contained file"

@@ -15,8 +15,8 @@
   work, not decoration.
 
 .EXAMPLE
-  .\harness\export.ps1
-  .\harness\export.ps1 -Game jumpdude -Out .\jumpdude-review.html
+  .\.claude\skills\runbox\tool\export.ps1
+  .\.claude\skills\runbox\tool\export.ps1 -Game dashguy -Out .\dashguy-review.html
 #>
 [CmdletBinding()]
 param(

@@ -1,7 +1,7 @@
 # Findings
 
-Why runbox is shaped the way it is. Every rule in `SKILL.md` traces to something
-measured here.
+Why runbox is shaped the way it is. Every rule in `SKILL.md` and every invariant in
+`AGENTS.md` traces to something measured here.
 
 This file exists because the rules do not look necessary from the outside. Without
 the evidence, a reasonable person simplifies them away and reintroduces the bug.
@@ -160,7 +160,41 @@ nothing.
 
 ---
 
-## F9. A test that depended on a bug expired when the bug was fixed
+## F9. The manual pass found two bugs, and neither needed a browser harness
+
+The one manual smoke test of the diff bay, run by a human against three real runs,
+found two defects. Both were real, both shipped, and neither was in the DOM.
+
+**Frame stepping did nothing visible.** Clips were captured every 3rd physics frame
+(every 8th in some cases) while the step button advanced one tick, so most steps
+landed between recorded frames and the picture did not change. The simulation was
+fine throughout: the operator watched the engine window run at 60Hz while the
+recording of it was lossy.
+
+Fixed twice over: capture defaults to every frame, and a run records its
+`capture_stride` so the client steps by it. At roughly 16KB a clip, sparse capture
+was buying nothing worth having.
+
+**Runs could not be referred to.** Runs were identified by timestamp, which never
+appeared in the interface, so the agent directing the test could not name a run the
+operator could see. Runs now carry a `label` through capture, `result.json`, the
+API, and every surface that shows a run.
+
+**On the harness question this settles:** a headless browser test could plausibly
+have caught the first by asserting that a rendered frame changes after a step. But
+a server-side assertion that the stride is exposed and the encode rate matches it
+is far cheaper and catches it earlier. The second is pure human factors and no
+automated test of any kind would have found it, because nothing was broken; it was
+merely unusable.
+
+**Conclusion:** do not build a browser harness. The failures that reach users in
+this tool sit between components, in encode rates, strides and naming, not inside
+the DOM. Spend the effort on assertions about the contract instead, and on running
+the manual pass when the interface changes shape.
+
+---
+
+## F10. A test that depended on a bug expired when the bug was fixed
 
 The tuner's tests implicitly relied on the prototype still being mis-tuned. The
 moment the tuner corrected it for real, there was no drift left, the tuner

@@ -79,7 +79,7 @@ app.MapGet("/api/preferred/{game}", (string game, string? @out, string? store) =
 {
     var runs = RunIndex.Scan(Or(@out, defaultOut));
     Verdicts.Apply(runs, Or(store, defaultStore));
-    // Only what the operator actually marked. Never the newest, never the
+    // Only what Nathan actually marked. Never the newest, never the
     // best-measuring: a judgment nobody made must not be invented.
     var preferred = runs.Where(r => r.Game == game && r.Verdict == "liked").ToList();
     return Results.Text(RunIndex.ToJson(preferred), "application/json");
@@ -255,6 +255,8 @@ sealed class Run
     public string? PrevRunId;
     public double? DeltaMeasured;
     public JsonObject Claims = new();
+    public string Label = "";
+    public int CaptureStride = 1;
 }
 
 static class RunIndex
@@ -292,6 +294,8 @@ static class RunIndex
                 Events = res["events"]?.DeepClone() as JsonArray ?? new JsonArray(),
                 RunAt = ReadRunAt(res, resultPath),
                 Claims = res["claims"]?.DeepClone() as JsonObject ?? new JsonObject(),
+                Label = res["label"]?.GetValue<string>() ?? "",
+                CaptureStride = res["capture_stride"]?.GetValue<int>() ?? 1,
             };
             // What the prototype says about itself. A claim, not a fact: the
             // whole point of recording it is to check it against the run.
@@ -412,6 +416,10 @@ static class RunIndex
                 ["game"] = r.Game,
                 ["scenario"] = r.Scenario,
                 ["runId"] = r.RunId,
+                // A name if the run has one; the id is a timestamp nobody can say
+                // out loud or recognise in a list.
+                ["label"] = r.Label.Length > 0 ? r.Label : null,
+                ["captureStride"] = r.CaptureStride,
                 ["runAt"] = r.RunAt.ToString("o"),
                 ["frames"] = r.Frames,
                 ["passed"] = r.Passed,

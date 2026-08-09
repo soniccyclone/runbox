@@ -15,6 +15,21 @@ const runOf = id => S.runs.find(r => r.id === id);
 const slotVids = () => Array.from(document.querySelectorAll(".slot video"));
 const fmt = (v, d = 1) => (v === null || v === undefined) ? "--" : Number(v).toFixed(d);
 
+/* A run's name if it has one, otherwise something recognisable. Never the raw
+ * id: it is a timestamp, and nobody can say one out loud or pick it out of a list. */
+const nameOf = r => r.label || (r.game + " / " + r.scenario);
+
+/* Physics ticks per step.
+ *
+ * Stepping one tick through a clip captured every Nth tick lands between
+ * recorded frames and the picture does not change, which reads as a broken
+ * button. Step by the coarsest stride currently loaded so a step always moves
+ * to a frame that exists. */
+function stepSize() {
+  const loaded = ["a", "b"].map(k => S.slots[k]).filter(Boolean).map(runOf);
+  return Math.max(1, ...loaded.map(r => r.captureStride || 1));
+}
+
 const EXPORTED = typeof window.__RUNS__ !== "undefined";
 
 async function boot() {
@@ -34,11 +49,21 @@ async function boot() {
   }
   // Newest first: the timeline reads top-down as most-recent-first.
   runs.sort((a, b) => String(b.runAt).localeCompare(String(a.runAt)));
+
+  // A run with no clip came from a headless gate, which has no framebuffer by
+  // design. Those are pass/fail results, not something to look at, and burying
+  // eight reviewable runs among forty-four blank cards makes the carousel
+  // useless. They stay in the index and in drift; they just are not shown here.
+  S.allRuns = runs;
+  const withClips = runs.filter(r => r.clip);
+  runs = withClips.length ? withClips : runs;
   S.runs = runs;
+  S.hiddenCount = S.allRuns.length - runs.length;
   S.maxFrames = Math.max(1, ...runs.map(r => r.frames || 1));
 
-  el("sub").innerHTML = runs.length + " RUNS INDEXED<br>" +
-    new Set(runs.map(r => r.game)).size + " PROTOTYPES";
+  el("sub").innerHTML = runs.length + " RUNS WITH CLIPS<br>" +
+    new Set(runs.map(r => r.game)).size + " PROTOTYPES" +
+    (S.hiddenCount ? " &middot; " + S.hiddenCount + " HEADLESS HIDDEN" : "");
   el("fmax").textContent = String(S.maxFrames).padStart(3, "0");
   el("track").setAttribute("aria-valuemax", S.maxFrames);
 
@@ -81,7 +106,7 @@ function buildCards() {
       '<button class="cardbtn" type="button">' + media +
         '<span class="cardmeta">' +
           '<span class="st" style="color:' + (r.passed ? "var(--good)" : "var(--warn)") + ';background:currentColor"></span>' +
-          '<span class="lbl">' + r.game + " / " + r.scenario + '</span>' +
+          '<span class="lbl">' + nameOf(r) + '</span>' +
           '<span class="in" data-in="' + r.id + '"></span>' +
         '</span>' +
       '</button>';
@@ -121,7 +146,7 @@ function drawCaption() {
   if (!r) { el("caption").textContent = ""; return; }
   const verdict = r.verdict ? '<span class="sep">|</span><span><b>MARKED</b></span>' : "";
   el("caption").innerHTML =
-    '<span><b>' + (r.game + " / " + r.scenario).toUpperCase() + '</b></span><span class="sep">|</span>' +
+    '<span><b>' + nameOf(r).toUpperCase() + '</b></span><span class="sep">|</span>' +
     '<span class="' + (r.passed ? "ok" : "bad") + '">' + (r.passed ? "PASS" : "FAIL") + '</span><span class="sep">|</span>' +
     '<span>' + (r.frames || 0) + ' FRAMES</span><span class="sep">|</span>' +
     '<span>MEASURED <b>' + fmt(r.measured) + '</b></span><span class="sep">|</span>' +
@@ -173,7 +198,7 @@ function drawSlot(key) {
     : '<div class="slot-empty"><span>no clip captured</span></div>';
   box.innerHTML =
     '<div class="slot-head"><span class="badge">' + K + '</span>' +
-      '<span class="nm">' + (r.game + "/" + r.scenario).toUpperCase() + '</span>' +
+      '<span class="nm">' + nameOf(r).toUpperCase() + '</span>' +
       '<span class="vel">' + new Date(r.runAt).toLocaleTimeString() + '</span>' +
       '<button class="eject" type="button" aria-label="Eject">&times;</button></div>' +
     '<div class="glass">' + media + '</div>';
@@ -386,10 +411,10 @@ async function launchCentre() {
 el("prev").addEventListener("click", () => spin(-1));
 el("next").addEventListener("click", () => spin(1));
 el("play").addEventListener("click", () => S.playing ? pause() : play());
-el("back1").addEventListener("click", () => { pause(); seek(S.frame - 1); });
-el("fwd1").addEventListener("click", () => { pause(); seek(S.frame + 1); });
-el("back10").addEventListener("click", () => { pause(); seek(S.frame - 10); });
-el("fwd10").addEventListener("click", () => { pause(); seek(S.frame + 10); });
+el("back1").addEventListener("click", () => { pause(); seek(S.frame - stepSize()); });
+el("fwd1").addEventListener("click", () => { pause(); seek(S.frame + stepSize()); });
+el("back10").addEventListener("click", () => { pause(); seek(S.frame - stepSize() * 10); });
+el("fwd10").addEventListener("click", () => { pause(); seek(S.frame + stepSize() * 10); });
 el("swap").addEventListener("click", () => { const t = S.slots.a; S.slots.a = S.slots.b; S.slots.b = t; refresh(); });
 el("markA").addEventListener("click", () => toggleMark("a"));
 el("markB").addEventListener("click", () => toggleMark("b"));
