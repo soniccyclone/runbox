@@ -1,0 +1,98 @@
+#+TITLE: runbox documentation
+#+OPTIONS: toc:nil num:nil author:nil date:nil
+
+#+BEGIN_EXPORT html
+<div class="cabinet">
+<span class="screw tl"></span><span class="screw tr"></span>
+<span class="screw bl"></span><span class="screw br"></span>
+<div class="nameplate">
+  <div><p class="model">Prototype Mill &middot; Model RB-1</p><h1>Documentation</h1></div>
+  <div class="plate-right"><a href="./index.html">Home</a></div>
+</div>
+#+END_EXPORT
+
+Two pages carry the substance, and both are generated from the files that ship,
+so neither can drift from the tool:
+
+- [[./skill-runbox.html][The method]], from =skills/runbox/SKILL.md=. What the loop is and how to run it.
+- [[./run-contract.html][The run contract]], from =skills/runbox/reference/run-contract.md=. Everything a
+  project must write.
+
+** Installing
+
+#+BEGIN_EXAMPLE
+npx github:soniccyclone/runbox init
+#+END_EXAMPLE
+
+Detection ranks the list of agents and never gates it, so installing runbox
+before your editor is not a dead end. Pass =--agent claude --agent cursor= to skip
+the prompt, or =--global= to install once for every project.
+
+| agent          | project            | global                       |
+|----------------+--------------------+------------------------------|
+| Claude Code    | =.claude/skills/=    | =~/.claude/skills/=            |
+| Cursor         | =.cursor/skills/=    | =~/.cursor/skills/=            |
+| GitHub Copilot | =.github/skills/=    | =~/.copilot/skills/=           |
+| opencode       | =.opencode/skills/=  | =~/.config/opencode/skills/=   |
+
+Rerunning is also the update path: it always writes the current skills.
+
+That step puts the skill where an agent will read it. A second step wires the
+harness into the project whose runs you want to compare:
+
+#+BEGIN_EXAMPLE
+cd <your-game>
+.\.claude\skills\runbox\install.ps1 -Launch "godot --path {game}"
+.\harness\serve.ps1
+#+END_EXAMPLE
+
+=install.ps1= writes a =harness\serve.ps1= wrapper, adds run output to
+=.gitignore=, and prints what the project still owes. It takes its target from
+your working directory rather than from where the skill sits, so a =--global=
+install works the same as a local one.
+
+** Requirements
+
+Windows, for now. The service and gallery are portable; =install.ps1= and the
+generated harness are not.
+
+The .NET SDK 10 or newer, because the service ships as a file-based app: a single
+=.cs= with no project file. There is nothing to build.
+
+ffmpeg is optional. Without it runs index and compare fine and simply have no
+video.
+
+** What you get
+
+- A *carousel* of every run, newest first, with each run's clip as its cover.
+- A *diff bay* holding two runs, played from one transport, seeking together.
+- *Event markers* on the scrubber, per slot, clickable to jump both runs to that frame.
+- *Deltas* between the two runs, signed B minus A, over whatever your project records.
+- *Drift*: what a prototype claims about itself against what its runs measured.
+- *Verdicts*: mark the run you preferred; it outlives restarts and regenerated output.
+- *Launch*: start a prototype from the gallery, via a command template.
+- *Export*: bake the current view into one self-contained file with the clips inline.
+
+The [[./demo.html][live demo]] is an export, produced by the real tool from three real runs.
+
+** Why the rules look arbitrary
+
+They are not, and the evidence is written down. [[https://github.com/soniccyclone/runbox/blob/main/skills/runbox/FINDINGS.md][FINDINGS.md]] records ten findings,
+each tied to a rule that a reasonable person would otherwise simplify away:
+
+- A closed-form constant disagreed with the running game by 9.5%.
+- The drift is a fixed offset, not a ratio, so a fitted calibration constant is
+  wrong everywhere except where it was fitted.
+- A respawn is indistinguishable from a landing, and pairing across one reported
+  6.7px of jump reach.
+- GIF is four times larger than the frames it encodes.
+- Sparse captures desynchronised video from their own markers, and the failure
+  looked like working software.
+- The first human verdict could not have been measured.
+
+#+BEGIN_EXPORT html
+<footer><a href="./index.html">Home</a> ·
+<a href="./demo.html">Live demo</a> ·
+<a href="https://github.com/soniccyclone/runbox">GitHub</a></footer>
+</div>
+#+END_EXPORT

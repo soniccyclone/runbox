@@ -82,6 +82,38 @@ constant" exists will eventually fit one.
 When adding to `skills/runbox/`, ask whether it makes sense to an agent who has
 only that directory and a game.
 
+## The site
+
+`site/build.sh` publishes to GitHub Pages. Every page with substance is generated
+from a file that ships, so the site cannot drift: the method page is `SKILL.md`
+and the contract page is `run-contract.md`, both via pandoc, and **the demo is a
+real `export.ps1` run** over the committed `site/demo-runs`. If the gallery
+changes, the demo changes with it; if the exporter breaks, the build fails.
+
+The demo numbers are F2 from `FINDINGS.md`, and the clips encode the reach they
+claim: airtime is `reach / speed`, so the horizontal distance on screen is the
+measured value in the delta table. Do not replace them with prettier footage that
+means nothing.
+
+`site/build.el` carries the skin, and it is **not a free choice**. The gallery
+commits to one finish and says so in its own comment. The site wears the same
+palette, lifted from the gallery's `:root`. Keep the two in step.
+
+Requires emacs, pandoc and pwsh. Nothing on Windows has all three, so verify in a
+container rather than trusting CI:
+
+```sh
+docker run --rm -v "//c/path/to/runbox:/src:ro" runbox-site \
+  sh -c 'cp -r /src /build && cd /build && sh site/build.sh && tar cf - -C /build/site www' > site.tar
+node site/check.js <extracted>/www
+```
+
+Build into a copy, not the bind mount: output written into a mounted Windows
+directory comes back with ownership the container cannot then delete.
+
+`site/check.js` runs before deploy and asserts what rots silently. Add to it when
+you add a page.
+
 ## Invariants. Do not relax these without evidence
 
 Each of these looks like it could be simplified. Each has a real incident behind

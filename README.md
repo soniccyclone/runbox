@@ -10,6 +10,12 @@ iterating on game feel, where the bottleneck is not writing code but judging it.
 Engine agnostic. Nothing here knows what a game is. If your project can write a
 JSON file and an mp4, it can drive this.
 
+**[Live demo](https://soniccyclone.github.io/runbox/demo.html)** ·
+**[Site](https://soniccyclone.github.io/runbox/)**
+
+The demo is not a mock-up. It is a real export, produced by `export.ps1` from
+three real runs, so it is the same artefact you get from your own.
+
 ---
 
 ## Install
@@ -133,6 +139,7 @@ skills/runbox/     the payload, delivered whole into an agent's skills directory
   install.ps1  reference/  tool/
 
 bin/  src/          the deposit CLI: agent targets, toolchain gate, copy
+site/              the published site: org sources, skin, demo runs
 AGENTS.md          invariants and traps, for an agent developing runbox
 test.ps1  tests/   the maintainer gate
 ```

@@ -99,6 +99,15 @@ if (Test-Path $outRoot) {
                     game     = $g.Name
                     scenario = $s.Name
                     runId    = $r.Name
+                    # The client titles a run by its label and falls back to
+                    # "<game> / <scenario>", which is identical for every run in
+                    # a scenario. Dropping the label here made an export a page
+                    # of runs nobody could tell apart, which is the defect in F9.
+                    label    = if ($res.label) { [string]$res.label } else { $null }
+                    # Stepping advances by the stride. Defaulted here rather than
+                    # omitted, because a missing value silently steps by 1 and
+                    # lands between recorded frames on any sparse capture.
+                    captureStride = if ($res.capture_stride) { [int]$res.capture_stride } else { 1 }
                     runAt    = if ($res.run_at) { $res.run_at } else { (Get-Item $rj).LastWriteTimeUtc.ToString('o') }
                     frames   = [int]$res.frames
                     passed   = [bool]$res.passed

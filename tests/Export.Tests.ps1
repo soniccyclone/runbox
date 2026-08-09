@@ -30,6 +30,33 @@ Register-Test 'Export :: contains_no_external_references' {
     } finally { Remove-TempTree $out; Remove-Item $file -Force -ErrorAction SilentlyContinue }
 }
 
+Register-Test 'Export :: keeps_the_fields_the_client_reads' {
+    $out = New-TempTree 'exp-fields'
+    $file = Join-Path $env:TEMP "runbox-export-fields-$PID.html"
+    try {
+        # The client titles a run by label and steps by captureStride. An export
+        # that drops either produces a page of runs nobody can tell apart, or a
+        # step button that lands between recorded frames. Both look like working
+        # software, which is why this asserts the payload rather than the pixels.
+        New-Run -OutRoot $out -Game 'g' -Scenario 's' -RunId 'r1' -Span 117 -Label 'floaty' -CaptureStride 3 -WithClip | Out-Null
+        Invoke-Export -OutRoot $out -File $file
+        $html = [System.IO.File]::ReadAllText($file)
+
+        Assert-Contains $html '"label":"floaty"' 'the export must carry the label'
+        Assert-Contains $html '"captureStride":3' 'the export must carry the capture stride'
+    } finally { Remove-TempTree $out; Remove-Item $file -Force -ErrorAction SilentlyContinue }
+}
+
+Register-Test 'Export :: defaults a missing stride to one' {
+    $out = New-TempTree 'exp-stride'
+    $file = Join-Path $env:TEMP "runbox-export-stride-$PID.html"
+    try {
+        New-Run -OutRoot $out -Game 'g' -Scenario 's' -RunId 'r1' -Span 117 -WithClip | Out-Null
+        Invoke-Export -OutRoot $out -File $file
+        Assert-Contains ([System.IO.File]::ReadAllText($file)) '"captureStride":1' 'a run that never declared a stride captured every frame'
+    } finally { Remove-TempTree $out; Remove-Item $file -Force -ErrorAction SilentlyContinue }
+}
+
 Register-Test 'Export :: carries_the_clips_inline' {
     $out = New-TempTree 'exp-clips'
     $file = Join-Path $env:TEMP "runbox-export-clips-$PID.html"

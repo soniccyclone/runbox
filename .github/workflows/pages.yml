@@ -1,0 +1,77 @@
+name: Publish site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'skills/**'
+      - 'README.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: purcell/setup-emacs@master
+        with:
+          version: 30.1
+
+      # Not bundled with Emacs. Without it org falls back to plain text and
+      # every code block on the site loses its highlighting.
+      - name: Install htmlize
+        run: |
+          emacs --batch --eval "(progn
+            (require 'package)
+            (add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)
+            (package-initialize)
+            (package-refresh-contents)
+            (package-install 'htmlize))"
+
+      # Converts the shipped markdown to org, so the method and contract pages
+      # are the real files rather than a transcription that drifts.
+      - name: Install pandoc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
+      # pwsh is preinstalled on ubuntu-latest and runs export.ps1, which bakes
+      # the demo from the committed runs using the real exporter. No .NET needed:
+      # the export reads the run tree directly and never starts the service.
+      - name: Build
+        run: sh site/build.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Asserts what rots silently: a dead internal link, a demo that grew a
+      # network dependency, an install line that no longer matches the README.
+      # Before deploying, not after.
+      - name: Check the built site
+        run: node site/check.js
+
+      # No `enablement: true`. Creating a Pages site needs repo-admin rights and
+      # the default GITHUB_TOKEN does not have them, so it fails with "Resource
+      # not accessible by integration" in precisely the case it was meant to
+      # handle. Pages is enabled once by a human; see the README.
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site/www
+      - id: deployment
+        uses: actions/deploy-pages@v4

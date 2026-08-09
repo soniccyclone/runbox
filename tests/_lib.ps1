@@ -264,7 +264,9 @@ function New-Run {
         [switch]$WithClip,
         [switch]$AbortSpan,
         [hashtable]$Measure = $null,
-        [string[]]$ExtraEvents = @()
+        [string[]]$ExtraEvents = @(),
+        [string]$Label = '',
+        [int]$CaptureStride = 0
     )
     $dir = Join-Path $OutRoot "$Game\$Scenario\$RunId"
     [void][System.IO.Directory]::CreateDirectory($dir)
@@ -296,6 +298,8 @@ function New-Run {
         events   = $events
     }
     if ($Measure) { $payload.measure = $Measure }
+    if ($Label) { $payload.label = $Label }
+    if ($CaptureStride -gt 0) { $payload.capture_stride = $CaptureStride }
 
     [System.IO.File]::WriteAllText((Join-Path $dir 'result.json'),
         ($payload | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))

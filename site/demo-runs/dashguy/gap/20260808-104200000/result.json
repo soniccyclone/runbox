@@ -1,0 +1,20 @@
+{
+  "scenario": "gap",
+  "label": "stock",
+  "run_at": "2026-08-08T10:42:00Z",
+  "frames": 111,
+  "capture_stride": 1,
+  "passed": true,
+  "reason": "tape exhausted",
+  "checks": [
+    { "name": "left_the_ground", "ok": true, "detail": "jumps=1" },
+    { "name": "cleared_the_gap", "ok": true, "detail": "deaths=0" }
+  ],
+  "counts": { "jump": 1, "land": 2 },
+  "claims": { "reach": 126.6 },
+  "events": [
+    { "frame": 9,  "name": "land", "x": 80.0,    "y": 383.93 },
+    { "frame": 22, "name": "jump", "x": 132.0,   "y": 383.93 },
+    { "frame": 53, "name": "land", "x": 270.70,  "y": 383.93 }
+  ]
+}

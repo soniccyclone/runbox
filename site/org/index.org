@@ -1,0 +1,99 @@
+#+TITLE: runbox
+#+OPTIONS: toc:nil num:nil author:nil date:nil
+
+#+BEGIN_EXPORT html
+<div class="cabinet">
+<span class="screw tl"></span><span class="screw tr"></span>
+<span class="screw bl"></span><span class="screw br"></span>
+<div class="nameplate">
+  <div><p class="model">Prototype Mill &middot; Model RB-1</p><h1>Run Box</h1></div>
+  <div class="plate-right">Windows &middot; Apache 2.0</div>
+</div>
+<p class="tagline">Compare recorded game runs side by side, at the same frame,
+and decide which one is more fun.</p>
+
+<p><a class="btn" href="./demo.html">Open the live demo</a>
+<a class="btn amber" href="./docs.html">Read the method</a>
+<a class="btn" href="https://github.com/soniccyclone/runbox">Source</a></p>
+#+END_EXPORT
+
+You can generate gameplay code far faster than anyone can evaluate it. The
+bottleneck is not authoring, it is a human's judgment about whether something is
+fun, and every iteration that makes them launch a build, play it, and try to
+remember how the last one felt burns the one scarce resource in the room.
+
+So the loop is: change one thing, capture a run, put it beside the previous run at
+the same frame, and ask for a verdict.
+
+** Install
+
+#+BEGIN_EXAMPLE
+npx github:soniccyclone/runbox init
+#+END_EXAMPLE
+
+Detects the agents this repo already uses and writes the skill to each one's own
+directory: Claude Code, Cursor, GitHub Copilot and opencode. Then, from the
+project whose runs you want to compare:
+
+#+BEGIN_EXAMPLE
+.\.claude\skills\runbox\install.ps1 -Launch "godot --path {game}"
+.\harness\serve.ps1
+#+END_EXAMPLE
+
+Windows for now. Needs the .NET SDK 10; =init= checks before it writes anything,
+because a skill whose service cannot start is worse than no skill.
+
+** The precondition, and it is not optional
+
+Runs must be *deterministic*: a fixed physics tick, a seeded generator, and input
+from a recorded tape. All three.
+
+With them, frame N of two runs is the same moment of the same scenario, so a
+difference on screen was caused by the change under test. Without them,
+side-by-side playback is theatre: the two runs diverge because the inputs
+diverged, and every conclusion drawn from it is noise.
+
+** Measurement is the authority
+
+A prototype declares what it believes about itself. The run measures the same
+quantity from its own events. When they disagree, the run is right.
+
+In the project runbox was built for, a closed-form formula computed a jump reach
+of 126.6px while the running game delivered 138.7px, because the formula assumes
+continuous motion and the engine integrates at a fixed tick. The level's gaps had
+been sized off the formula, so it was measurably easier than its own source code
+claimed and nobody had noticed. Reading the code could not have revealed it.
+
+That is the drift the demo is showing you, across three jump strengths:
+
+| setting | claimed | measured | drift | absolute error |
+|---------+---------+----------+-------+----------------|
+| floaty  |   104.6 |    117.0 | +11.9% | 12.4px        |
+| stock   |   126.6 |    138.7 | +9.6%  | 12.1px        |
+| poppy   |   154.2 |    164.7 | +6.8%  | 10.5px        |
+
+The percentage falls as the jump grows while the absolute error holds near 12px.
+It is a fixed discretisation offset, not a ratio, so a calibration constant fitted
+at one setting is wrong at every other. runbox reports drift per run and never
+emits a correction factor.
+
+** What your project has to provide
+
+A JSON file and an mp4, per run. Nothing here knows what a game is.
+
+#+BEGIN_EXAMPLE
+.harness-out/<game>/<scenario>/<runId>/result.json
+.harness-out/<game>/<scenario>/<runId>/clip.mp4      (optional)
+#+END_EXAMPLE
+
+Event names are yours. Markers, the legend and the delta table are all derived
+from whatever kinds your runs contain, so =hit= and =reload= work exactly as well
+as =jump= and =land=.
+
+#+BEGIN_EXPORT html
+<footer><a href="./docs.html">Documentation</a> ·
+<a href="./demo.html">Live demo</a> ·
+<a href="https://github.com/soniccyclone/runbox">GitHub</a> ·
+Apache 2.0</footer>
+</div>
+#+END_EXPORT

@@ -1,5 +1,11 @@
 node_modules/
 
+# Built site and the org generated from shipped markdown. Both are outputs.
+site/www/
+site/gen/
+site/org/skill-*.org
+site/org/run-contract.org
+
 # Staged deliverable, if anyone still runs a package step by hand.
 dist/
 
