@@ -114,7 +114,40 @@ directory comes back with ownership the container cannot then delete.
 `site/check.js` runs before deploy and asserts what rots silently. Add to it when
 you add a page.
 
-## Invariants. Do not relax these without evidence
+## Releasing
+
+Standard semver, `vMAJOR.MINOR.PATCH`, matching the `version` in `package.json`.
+Plain `v0.9.0`, not prefixed, so the npx pin form reads naturally.
+
+**The bump and the tag are one commit.** `package.json` is the only place the
+version lives, the CLI reads it from there, and the tag points at the commit that
+changed it. A tag on a commit whose `package.json` says something else means
+`runbox --version` is lying about which code someone has.
+
+```powershell
+# edit package.json, then
+git commit -m "Release X.Y.Z"
+git tag vX.Y.Z
+git push origin main --follow-tags
+```
+
+What each level means here, for a package that is one skill, a deposit CLI and a
+service:
+
+- **Major**: the run contract breaks, an install path moves, or the skill is
+  renamed. Anything where rerunning `init` leaves someone worse off than not
+  running it, or where a host project's existing runs stop being readable.
+- **Minor**: a new install target, a new capability, an optional contract field.
+  Rerunning `init` gains something.
+- **Patch**: skill wording, an installer bug, a service or exporter fix.
+  Rerunning `init` fixes something.
+
+**0.9.0 is deliberate, and 1.0.0 has a bar.** The tool has run in exactly one
+game project, the Godot mill it was extracted from. The deposit CLI, the
+installer and the site have only ever been exercised here and in throwaway
+repos. 1.0.0 is when someone takes runbox into a game project that is not the
+originating one, captures real runs, and gives a verdict without help. Until
+then the version says so.
 
 Each of these looks like it could be simplified. Each has a real incident behind
 it, recorded in `FINDINGS.md`.

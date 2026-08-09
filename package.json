@@ -1,6 +1,6 @@
 {
   "name": "@soniccyclone/runbox",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "Compare recorded game runs side by side, frame-locked, and decide which one is more fun. Skills for Claude Code, Cursor, Copilot, and opencode.",
   "type": "module",
   "bin": {
