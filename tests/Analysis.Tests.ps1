@@ -95,6 +95,37 @@ Register-Test 'Analysis :: measured_span_bounds_are_declarable' {
     } finally { Stop-RunboxServer $s; Remove-TempTree $out }
 }
 
+Register-Test 'Analysis :: capture_stride_is_surfaced_so_stepping_lands_on_real_frames' {
+    $s = $null; $out = New-TempTree 'stride'
+    try {
+        # A clip captured every Nth tick has no frame at most tick numbers.
+        # Stepping one tick through it leaves the picture unchanged, which reads
+        # as a broken button. The client steps by this, so it has to be exposed.
+        $dir = New-Run -OutRoot $out -Game 'g' -Scenario 's' -RunId 'sparse' -Span 100
+        $rj = Join-Path $dir 'result.json'
+        $obj = Get-Content $rj -Raw | ConvertFrom-Json
+        $obj | Add-Member -NotePropertyName 'capture_stride' -NotePropertyValue 3 -Force
+        $obj | Add-Member -NotePropertyName 'label' -NotePropertyValue 'sparse-run' -Force
+        [System.IO.File]::WriteAllText($rj, ($obj | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
+
+        $s = Start-RunboxServer -Port 7919
+        $run = @((Invoke-Json "$($s.BaseUrl)/api/runs?out=$([uri]::EscapeDataString($out))").Json)[0]
+        Assert-Equal 3 ([int]$run.captureStride) 'stride must survive indexing'
+        Assert-Equal 'sparse-run' ([string]$run.label) 'a run that has a name must keep it'
+    } finally { Stop-RunboxServer $s; Remove-TempTree $out }
+}
+
+Register-Test 'Analysis :: a_run_without_a_label_reports_none' {
+    $s = $null; $out = New-TempTree 'nolabel'
+    try {
+        New-Run -OutRoot $out -Game 'g' -Scenario 's' -RunId 'r1' -Span 100 | Out-Null
+        $s = Start-RunboxServer -Port 7920
+        $run = @((Invoke-Json "$($s.BaseUrl)/api/runs?out=$([uri]::EscapeDataString($out))").Json)[0]
+        Assert-Equal $null $run.label 'absent, so a client can fall back rather than print an empty name'
+        Assert-Equal 1 ([int]$run.captureStride) 'stride defaults to every frame'
+    } finally { Stop-RunboxServer $s; Remove-TempTree $out }
+}
+
 Register-Test 'Analysis :: an_aborted_span_measures_nothing' {
     $s = $null; $out = New-TempTree 'abort'
     try {

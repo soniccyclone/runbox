@@ -102,15 +102,21 @@ that pairs events abandon a sequence containing one.
 
 ## Installing into a repo
 
-Copy this whole skill directory into the target repo's `.claude/skills/`. Then:
+Windows only for now.
+
+Run the installer from inside the project you want to instrument. It works
+whether this skill was copied into that project or installed as a plugin, because
+it takes the target from the working directory rather than from its own location:
 
 ```powershell
-.\.claude\skills\runbox\install.ps1
+cd <the game project>
+<this directory>\install.ps1 -Launch "godot --path {game}"
 ```
 
-It writes a `harness\serve.ps1` wrapper, checks for ffmpeg, and prints what the
-project still has to provide. Nothing else is needed: the service is a .NET
-file-based app with no project file, and the gallery is two static assets beside it.
+It writes a `harness\serve.ps1` wrapper, adds run output to `.gitignore`, checks
+for ffmpeg, and prints what the project still has to provide. Nothing else is
+needed: the service is a .NET file-based app with no project file, and the gallery
+is two static assets beside it.
 
 The project's only obligation is to write run output in the shape described in
 [reference/run-contract.md](reference/run-contract.md). That contract is engine
@@ -119,9 +125,20 @@ agnostic. Anything that can write a JSON file and an mp4 can drive this.
 ## Driving it
 
 ```powershell
-dotnet run .claude\skills\runbox\tool\serve.cs -- --port 7777 --root .
-dotnet run .claude\skills\runbox\tool\serve.cs -- --port 7777 --root . --launch "godot --path {game}"
-.\.claude\skills\runbox\tool\export.ps1 -Game <name>
+.\harness\serve.ps1
+.\harness\serve.ps1 -Port 7800 -Launch "godot --path {game}"
+```
+
+**Use the wrapper, not a raw `dotnet run`.** It knows where this skill actually
+lives, which differs between a copied-in skill and a plugin, and a plugin's path
+carries its version. If the wrapper says runbox is not where it was installed
+from, the skill moved or updated: re-run `install.ps1` and it will be correct
+again.
+
+For the export, which has no wrapper:
+
+```powershell
+<this directory>\tool\export.ps1 -Game <name>
 ```
 
 `--launch` is a command template with `{game}` standing for the prototype's

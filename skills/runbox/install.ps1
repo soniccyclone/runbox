@@ -1,21 +1,35 @@
 <#
 .SYNOPSIS
-  Wire runbox into the repo this skill has been copied into.
+  Wire runbox into a project so its runs can be browsed and compared.
 
 .DESCRIPTION
-  Writes a harness\serve.ps1 wrapper, checks the toolchain, and reports what the
-  project still has to provide. Deliberately small: the service is a .NET
-  file-based app with no project file and the gallery is two static assets beside
-  it, so there is nothing to build and nothing to install.
+  Writes a harness\serve.ps1 wrapper, adds run output to .gitignore, checks the
+  toolchain, and reports what the project still has to provide. Deliberately
+  small: the service is a .NET file-based app with no project file and the
+  gallery is two static assets beside it, so there is nothing to build.
+
+  Works from either place the skill can live:
+
+    copied in    <project>\.claude\skills\runbox\install.ps1
+    installed    ~\.claude\plugins\...\runbox\skills\runbox\install.ps1
+
+  The difference matters. Installed as a plugin the skill is NOT inside the
+  project, so the target cannot be derived from this script's location the way
+  it can when the skill was copied in. The target comes from the working
+  directory instead, which is the project either way.
+
+  Windows only for now. It leans on Windows PowerShell and Windows path shapes.
 
   Safe to re-run. It will not overwrite an existing wrapper unless -Force.
 
 .EXAMPLE
   .\.claude\skills\runbox\install.ps1
   .\.claude\skills\runbox\install.ps1 -Launch "love {game}" -Force
+  <plugin-path>\install.ps1 -Target C:\code\my-game
 #>
 [CmdletBinding()]
 param(
+    [string]$Target = '',
     [string]$Launch = '',
     [int]$Port = 7777,
     [switch]$Force
@@ -23,28 +37,63 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Get-RepoRoot {
-    $d = $PSScriptRoot
-    while ($d -and -not (Test-Path (Join-Path $d '.git'))) {
+if ($env:OS -ne 'Windows_NT') {
+    throw "runbox targets Windows for now. The service and gallery are portable, but this installer and the harness scripts are not."
+}
+
+<#
+  The project being instrumented, found by walking up from where the user is.
+
+  NOT from $PSScriptRoot. Installed as a plugin this script lives in the plugin
+  cache, and walking up from there finds the cache, not the project.
+#>
+function Resolve-Target {
+    param([string]$Explicit)
+    if ($Explicit) {
+        if (-not (Test-Path -LiteralPath $Explicit)) { throw "no such directory: $Explicit" }
+        return (Resolve-Path -LiteralPath $Explicit).Path
+    }
+    $d = (Get-Location).Path
+    while ($d) {
+        if (Test-Path (Join-Path $d '.git')) { return $d }
         $parent = Split-Path -Parent $d
         if ($parent -eq $d) { break }
         $d = $parent
     }
-    if (-not $d -or -not (Test-Path (Join-Path $d '.git'))) { throw "could not find a repo root above $PSScriptRoot" }
-    return $d
+    throw "no git repository at or above $((Get-Location).Path). cd into the project you want to instrument, or pass -Target."
 }
 
-$root = Get-RepoRoot
-$tool = Join-Path $PSScriptRoot 'tool'
+$root = Resolve-Target $Target
+$tool = (Resolve-Path (Join-Path $PSScriptRoot 'tool')).Path
+
+# Run from inside the runbox repo, the walk above finds runbox itself and this
+# would install the skill into its own source. The workshop is what identifies
+# it: a consuming project has the deliverable and none of this.
+if ((Test-Path (Join-Path $root 'test.ps1')) -and
+    (Test-Path (Join-Path $root 'skills\runbox\SKILL.md'))) {
+    throw "this is the runbox repo. Run the installer from the project you want to instrument, or pass -Target <path>."
+}
+
 $harness = Join-Path $root 'harness'
 $wrapper = Join-Path $harness 'serve.ps1'
 
+# A skill copied into the project should produce a wrapper that survives being
+# cloned elsewhere, so reference it relatively. A skill installed as a plugin is
+# outside the project entirely and has no relative form, so use the real path.
+$inProject = $tool.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
+$serveExpr = if ($inProject) {
+    "Join-Path `$root '$($tool.Substring($root.Length).TrimStart('\','/'))\serve.cs'"
+} else {
+    "'$tool\serve.cs'"
+}
+
 Write-Output "runbox -> $root"
+Write-Output ("  skill at $tool" + $(if ($inProject) { '' } else { ' (outside the project)' }))
 Write-Output ""
 
 # ---- toolchain ------------------------------------------------------------
-$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
-            [Environment]::GetEnvironmentVariable('Path','User')
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+            [Environment]::GetEnvironmentVariable('Path', 'User')
 
 $sdk = (& dotnet --list-sdks 2>$null | Select-Object -Last 1)
 if (-not $sdk) { Write-Output "[!] no .NET SDK found. runbox needs one that supports file-based apps (10.x)." }
@@ -60,7 +109,6 @@ if ((Test-Path $wrapper) -and -not $Force) {
     Write-Output "[=] harness\serve.ps1 already exists (use -Force to replace)"
 }
 else {
-    $launchLine = if ($Launch) { "`n    '--launch', '$Launch'," } else { '' }
     $body = @"
 <#
   Start the runbox gallery for this repo. Generated by the runbox skill installer.
@@ -70,7 +118,11 @@ param([int]`$Port = $Port, [string]`$Launch = '$Launch')
 
 `$ErrorActionPreference = 'Stop'
 `$root = Split-Path -Parent `$PSScriptRoot
-`$serve = Join-Path `$root '.claude\skills\runbox\tool\serve.cs'
+`$serve = $serveExpr
+
+if (-not (Test-Path `$serve)) {
+    throw "runbox is not where it was installed from: `$serve. Re-run install.ps1."
+}
 
 `$serveArgs = @('run', `$serve, '--', '--port', `$Port, '--root', `$root)
 if (`$Launch) { `$serveArgs += @('--launch', `$Launch) }
@@ -83,14 +135,26 @@ Write-Output "runbox on http://127.0.0.1:`$Port/"
 }
 
 # ---- gitignore ------------------------------------------------------------
+# Written, not warned about. Run output is large, regenerable and produced on every
+# capture, so the gap between "you should ignore this" and actually ignoring it is
+# one commit full of clips.
 $gi = Join-Path $root '.gitignore'
-$needed = @('.harness-out/', '.harness-verdicts.json')
-if (Test-Path $gi) {
-    $text = [System.IO.File]::ReadAllText($gi)
-    $missing = $needed | Where-Object { $text -notlike "*$_*" }
-    if ($missing) {
-        Write-Output "[!] add to .gitignore: $($missing -join ', ')"
-    } else { Write-Output "[+] .gitignore already covers run output and verdicts" }
+$needed = @('.harness-out/', '.harness-verdicts.json', 'harness/')
+
+# MEASURED: Get-Content -Raw decodes a BOM-less file with the system ANSI codepage
+# and Set-Content -Encoding utf8 writes a BOM, so both corrupt a round trip on 5.1.
+$enc = New-Object System.Text.UTF8Encoding($false)
+$text = if (Test-Path $gi) { [System.IO.File]::ReadAllText($gi) } else { '' }
+$missing = @($needed | Where-Object { $text -notlike "*$_*" })
+
+if (-not $missing) {
+    Write-Output "[+] .gitignore already covers run output and verdicts"
+}
+else {
+    $add = "`r`n# runbox: generated harness, run output and verdicts`r`n" + ($missing -join "`r`n") + "`r`n"
+    if ($text -and -not $text.EndsWith("`n")) { $add = "`r`n" + $add }
+    [System.IO.File]::WriteAllText($gi, $text + $add, $enc)
+    Write-Output "[+] .gitignore: added $($missing -join ', ')"
 }
 
 # ---- what the project still owes ------------------------------------------
@@ -105,8 +169,10 @@ if ($hasRuns) {
 else {
     Write-Output "  This project does not write run output yet. runbox needs:"
     Write-Output "    .harness-out\<game>\<scenario>\<runId>\result.json"
-    Write-Output "  with run_at, frames, passed and events. See reference\run-contract.md."
+    Write-Output "  with run_at, frames, passed and events. See the run contract beside"
+    Write-Output "  this script: reference\run-contract.md."
     Write-Output "  Determinism first: fixed tick, seeded RNG, recorded input. Without all"
     Write-Output "  three, frame-locked comparison is meaningless."
 }
-Write-Output "  .\.claude\skills\runbox\tool\export.ps1   bake one self-contained file"
+Write-Output "  $tool\export.ps1"
+Write-Output "                                      bake one self-contained file"

@@ -1,0 +1,18 @@
+{
+  "name": "runbox",
+  "description": "REPL-driven game development where the feedback loop is a carousel of recorded runs compared side by side at the same frame. Ships a local gallery service that indexes runs, streams clips, and holds two runs frame-locked for comparison. Windows only.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Nathan Barlow",
+    "email": "nathanjbarlow@gmail.com"
+  },
+  "homepage": "https://github.com/soniccyclone/runbox",
+  "license": "Apache-2.0",
+  "keywords": [
+    "gamedev",
+    "playtesting",
+    "determinism",
+    "godot",
+    "windows"
+  ]
+}

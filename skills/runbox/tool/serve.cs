@@ -79,7 +79,7 @@ app.MapGet("/api/preferred/{game}", (string game, string? @out, string? store) =
 {
     var runs = RunIndex.Scan(Or(@out, defaultOut));
     Verdicts.Apply(runs, Or(store, defaultStore));
-    // Only what Nathan actually marked. Never the newest, never the
+    // Only what the operator actually marked. Never the newest, never the
     // best-measuring: a judgment nobody made must not be invented.
     var preferred = runs.Where(r => r.Game == game && r.Verdict == "liked").ToList();
     return Results.Text(RunIndex.ToJson(preferred), "application/json");

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "runbox",
+  "version": "1.0.0",
+  "description": "runbox: compare recorded game runs side by side, frame-locked, and decide which one is more fun",
+  "owner": {
+    "name": "Nathan Barlow",
+    "email": "nathanjbarlow@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "runbox",
+      "description": "REPL-driven game development where the feedback loop is a carousel of recorded runs compared side by side at the same frame. Windows only.",
+      "version": "1.0.0",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}

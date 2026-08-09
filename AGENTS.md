@@ -23,7 +23,7 @@ deliberately absent.
 .\test.ps1 -Name '*drift*' # one case
 ```
 
-Twenty-five integration tests, self-contained. Every case builds its own run tree
+Thirty-four integration tests, self-contained. Every case builds its own run tree
 in a temp directory and points the service at it with `--out`, so the suite runs
 in this repo with no game, no engine, and nothing installed but .NET.
 
@@ -44,6 +44,8 @@ Two audiences, kept apart by where files live rather than by a list someone has 
 remember to update.
 
 ```
+.claude-plugin/    plugin.json and marketplace.json. The repo root is the plugin.
+
 skills/runbox/     ships. Copied whole into <project>/.claude/skills/runbox
   SKILL.md  FINDINGS.md  install.ps1  reference/  tool/
 
@@ -54,6 +56,20 @@ Claude Code discovers skills at `.claude/skills/<name>/SKILL.md`, so the install
 shape is fixed. Putting the deliverable in its own directory makes the installed
 shape a subtree of the repo shape, and the separation survives someone adding a
 file without thinking about packaging.
+
+**A plugin install copies the whole repo into the plugin cache**, workshop and
+all, so `AGENTS.md` is present on disk there. It is not *loaded*: only `skills/`,
+`agents/`, `commands/` and hooks are components, and `claude plugin details`
+reports one skill and nothing else. The directory split is still what keeps this
+file out of a project that copied the skill in, which is the case that matters.
+
+Verify packaging changes with the real tool rather than by reading the manifests:
+
+```powershell
+claude plugin validate .claude-plugin/plugin.json
+claude plugin validate .claude-plugin/marketplace.json
+claude plugin marketplace add ./   # then install, check details, then remove
+```
 
 `FINDINGS.md` ships on purpose. The rules in `SKILL.md` read as arbitrary without
 their evidence, and an agent that cannot see why "never emit a calibration
@@ -95,6 +111,19 @@ routinely.
 
 **A first run reports no delta, not a delta of zero.** Zero reads as "no change",
 which is a different claim from "nothing to compare against".
+
+**The installer takes its target from the working directory, never from
+`$PSScriptRoot`.** Installed as a plugin the skill is not inside the project at
+all, so walking up from the script finds the plugin cache. Walking up from where
+the operator is standing finds the project under both installs. A test covers each
+shape, including one that copies the skill outside the project on purpose.
+
+**The generated wrapper is relative when the skill is inside the project and
+absolute when it is not.** Relative survives the project being cloned elsewhere;
+a plugin path has no relative form. The wrapper checks that its `serve.cs` still
+exists and throws if not, because a plugin path carries a version and an update
+invalidates it. Failing loudly there is the point: the alternative is running a
+version of the service nobody chose.
 
 **Nothing uploads anything.** The whole point is that unreleased game design stays
 on the machine that produced it. The export is a local file. If a change would
@@ -145,10 +174,16 @@ which is baked in at compile time.
 
 Do not add these without a reason that did not exist before.
 
-- **No browser test harness.** The playback layer is JavaScript, and a headless
-  browser is a large dependency. The data layer is tested instead, and the one
-  frame-lock bug found in practice was an encoder/arithmetic mismatch a DOM test
-  would also have missed. See `FINDINGS.md`.
+- **No browser test harness. This question is settled; do not reopen it without
+  new evidence.** It was open until the manual pass ran, and the pass answered it.
+  Both defects it found (F9) sat outside the DOM: frame stepping did nothing
+  visible because the capture stride was not exposed, which a server-side
+  assertion catches earlier and cheaper, and runs could not be referred to at all,
+  which is human factors that no automated test finds because nothing was broken.
+  With F7, where a frame-lock bug lived between the encoder and the seek
+  arithmetic, the pattern holds: this tool's failures sit **between** components,
+  in encode rates, strides and naming. Spend the effort on contract assertions,
+  and re-run the manual pass whenever the interface changes shape.
 - **No authentication, no multi-user, no remote access.** It binds to `127.0.0.1`
   and is a single-operator tool.
 - **No live reload.** The page re-reads the index on load. Refresh is fine, and a

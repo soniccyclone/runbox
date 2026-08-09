@@ -27,8 +27,10 @@ flight is normal and must not break browsing.
 ```json
 {
   "scenario": "jump",
+  "label":    "stock",
   "run_at":   "2026-08-08T06:45:44.3241070Z",
   "frames":   112,
+  "capture_stride": 1,
   "passed":   true,
   "reason":   "tape exhausted",
   "checks":   [ { "name": "left_the_ground", "ok": true, "detail": "jumps=1" } ],
@@ -48,10 +50,41 @@ flight is normal and must not break browsing.
 | `frames` | yes | Physics ticks the run lasted. Marker positions are `frame / frames`. |
 | `passed` | yes | Whether every check passed. A failed run is not a candidate for a taste verdict. |
 | `events` | yes | The measurement surface. See below. |
+| `label` | no | Short human name for the run. Defaults to `<game> / <scenario>`. |
+| `capture_stride` | no | Physics ticks between captured frames. Defaults to `1`. |
 | `claims` | no | What the prototype believes about itself. Compared against measurement to produce drift. |
 | `counts` | no | Convenience tallies. Deltas are computed from `events`, not from these. |
 | `checks` | no | Per-check detail, shown on the card. |
 | `reason` | no | Why the run ended. |
+
+## label
+
+Write one if you want to be able to talk about a run.
+
+Runs were originally identified by timestamp, and the timestamp never appeared in
+the interface. An agent directing a comparison could not name a run the operator
+could see, which made the whole verdict step awkward for a reason that had nothing
+to do with the game. Nothing was broken; it was merely unusable, and no automated
+test of any kind would have found it.
+
+Keep it short and say what changed: `floaty`, `poppy`, `stock+coyote`. It is what
+the card and the diff bay slots are titled.
+
+## capture_stride
+
+Physics ticks between captured frames. Write it whenever it is not 1.
+
+The client steps the video by the largest stride among the loaded runs, so a run
+that captured every 3rd tick steps 3 ticks at a time and lands on a frame that
+actually exists. Omit it on a sparse capture and the step button advances one tick
+into a frame that was never recorded, so the picture does not change and the tool
+looks broken while the simulation is fine.
+
+This is the same quantity that sets the encode rate. See **clips** below: get the
+two out of agreement and video time stops matching physics time.
+
+**Capturing every frame is the better default.** At roughly 16KB a clip, sparse
+capture buys nothing worth the failure mode.
 
 ## events
 

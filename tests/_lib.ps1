@@ -125,6 +125,67 @@ function Invoke-Json {
 
 # ---- fixtures -----------------------------------------------------------
 
+# ---- installer fixtures -------------------------------------------------
+
+<#
+  A project that looks instrumentable: a git repo and nothing else. `git init`
+  rather than a bare .git directory, because the installer walks for a real one.
+#>
+function New-FakeProject {
+    param([Parameter(Mandatory)][string]$Path)
+    Push-Location $Path
+    try { & git init -q 2>&1 | Out-Null } finally { Pop-Location }
+}
+
+<# The copied-in shape: <project>\.claude\skills\runbox. #>
+function Install-SkillCopy {
+    param([Parameter(Mandatory)][string]$Project)
+    $dest = Join-Path $Project '.claude\skills\runbox'
+    [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $dest))
+    Copy-Item (Get-SkillRoot) $dest -Recurse -Force
+    return $dest
+}
+
+<#
+  Run the installer the way a person does: standing in the project. The target is
+  resolved from the working directory, so -From is the thing under test as much
+  as any argument is.
+#>
+function Invoke-Installer {
+    param(
+        [Parameter(Mandatory)][string]$Skill,
+        [Parameter(Mandatory)][string]$From,
+        [switch]$Force
+    )
+    Push-Location $From
+    try {
+        $a = @{}
+        if ($Force) { $a.Force = $true }
+        & (Join-Path $Skill 'install.ps1') @a
+    } finally { Pop-Location }
+}
+
+function Get-WrapperServeLine {
+    param([Parameter(Mandatory)][string]$WrapperPath)
+    $line = @(Get-Content $WrapperPath | Where-Object { $_ -match '^\$serve\s*=' })[0]
+    if (-not $line) { throw "no `$serve assignment in $WrapperPath" }
+    return $line
+}
+
+<#
+  Evaluate the wrapper's own path expression, rather than pattern-matching it.
+  The question is whether the generated wrapper finds serve.cs at runtime, and
+  only evaluating it actually asks that.
+#>
+function Resolve-WrapperServe {
+    param([Parameter(Mandatory)][string]$WrapperPath, [Parameter(Mandatory)][string]$ProjectRoot)
+    $expr = (Get-WrapperServeLine $WrapperPath) -replace '^\$serve\s*=\s*', ''
+    $root = $ProjectRoot   # the wrapper's own variable, in scope for the eval
+    return (Invoke-Expression $expr)
+}
+
+# ---- temp trees ---------------------------------------------------------
+
 function New-TempTree {
     param([Parameter(Mandatory)][string]$Tag)
     $p = Join-Path $env:TEMP "runbox-$Tag-$PID-$(Get-Random -Maximum 99999)"
