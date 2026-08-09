@@ -8,14 +8,14 @@
   small: the service is a .NET file-based app with no project file and the
   gallery is two static assets beside it, so there is nothing to build.
 
-  Works from either place the skill can live:
+  Works from either place `npx github:soniccyclone/runbox init` can put a skill:
 
-    copied in    <project>\.claude\skills\runbox\install.ps1
-    installed    ~\.claude\plugins\...\runbox\skills\runbox\install.ps1
+    project    <project>\.claude\skills\runbox\install.ps1
+    global     ~\.claude\skills\runbox\install.ps1     (init --global)
 
-  The difference matters. Installed as a plugin the skill is NOT inside the
+  The difference matters. After a global install the skill is NOT inside the
   project, so the target cannot be derived from this script's location the way
-  it can when the skill was copied in. The target comes from the working
+  it can when the skill was delivered locally. The target comes from the working
   directory instead, which is the project either way.
 
   Windows only for now. It leans on Windows PowerShell and Windows path shapes.
@@ -25,7 +25,7 @@
 .EXAMPLE
   .\.claude\skills\runbox\install.ps1
   .\.claude\skills\runbox\install.ps1 -Launch "love {game}" -Force
-  <plugin-path>\install.ps1 -Target C:\code\my-game
+  ~\.claude\skills\runbox\install.ps1 -Target C:\code\my-game
 #>
 [CmdletBinding()]
 param(
@@ -44,8 +44,8 @@ if ($env:OS -ne 'Windows_NT') {
 <#
   The project being instrumented, found by walking up from where the user is.
 
-  NOT from $PSScriptRoot. Installed as a plugin this script lives in the plugin
-  cache, and walking up from there finds the cache, not the project.
+  NOT from $PSScriptRoot. After a global install this script lives under the
+  home directory, and walking up from there finds the wrong repo, or none.
 #>
 function Resolve-Target {
     param([string]$Explicit)
@@ -78,7 +78,7 @@ $harness = Join-Path $root 'harness'
 $wrapper = Join-Path $harness 'serve.ps1'
 
 # A skill copied into the project should produce a wrapper that survives being
-# cloned elsewhere, so reference it relatively. A skill installed as a plugin is
+# cloned elsewhere, so reference it relatively. A globally installed skill is
 # outside the project entirely and has no relative form, so use the real path.
 $inProject = $tool.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
 $serveExpr = if ($inProject) {

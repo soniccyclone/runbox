@@ -1,3 +1,5 @@
+node_modules/
+
 # Staged deliverable, if anyone still runs a package step by hand.
 dist/
 
@@ -9,6 +11,8 @@ harness/
 # Exports are generated artefacts.
 *.runbox.html
 
-# .NET file-based apps still leave these behind.
-bin/
+# .NET build leftovers. NOT a bare `bin/`: that is the deposit CLI's home, and
+# ignoring it silently drops bin/runbox.js from the package.
+**/bin/Debug/
+**/bin/Release/
 obj/

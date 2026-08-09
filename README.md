@@ -14,49 +14,50 @@ JSON file and an mp4, it can drive this.
 
 ## Install
 
-**Windows only for now.** The service and gallery are portable; the installer and
-the harness scripts are not.
+**Windows only for now.** The service and gallery are portable; `install.ps1` and
+the generated harness are not.
 
-As a Claude Code plugin:
+Two steps. The first puts the skill where your agent will read it:
 
 ```
-/plugin marketplace add soniccyclone/runbox
-/plugin install runbox@runbox
+npx github:soniccyclone/runbox init
 ```
 
-Or copy the skill straight into a project:
+It detects what the repo already uses, asks which agents to install for, and
+writes to each one's own directory:
 
-```powershell
-git clone https://github.com/soniccyclone/runbox
-mkdir <your-game>\.claude\skills
-cp -r runbox\skills\runbox <your-game>\.claude\skills\runbox
-```
+| agent | project | global |
+|---|---|---|
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
+| GitHub Copilot | `.github/skills/` | `~/.copilot/skills/` |
+| opencode | `.opencode/skills/` | `~/.config/opencode/skills/` |
 
-Either way, wire it into the project from inside the project:
+Pass `--agent claude --agent cursor` to skip the prompt, or `--global` to install
+for every project at once. Rerunning is also the update path: it always writes the
+current skills.
+
+The second step wires the harness into the project whose runs you want to compare:
 
 ```powershell
 cd <your-game>
-<path-to-skill>\install.ps1 -Launch "godot --path {game}"
+.\.claude\skills\runbox\install.ps1 -Launch "godot --path {game}"
 .\harness\serve.ps1
 ```
 
-The installer takes its target from your working directory, not from where the
-skill happens to sit, which is what lets the same script serve both installs. It
-writes a `harness\serve.ps1` wrapper, adds run output to your `.gitignore`, checks
-the toolchain, and prints what your project still owes. It refuses to run inside
-this repo, because that would install runbox into its own source.
+That writes a `harness\serve.ps1` wrapper, adds run output to your `.gitignore`,
+and prints what your project still owes. It takes its target from your working
+directory rather than from where the skill sits, so a `--global` install works the
+same as a local one. It refuses to run inside this repo, because that would
+install runbox into its own source.
 
-Requires the .NET SDK (10.x, for file-based apps). ffmpeg is optional; without it
-runs index fine and simply have no video.
+Requires the .NET SDK (10.x, for file-based apps). `init` checks for it before
+writing anything, because a skill whose service cannot start is worse than no
+skill. ffmpeg is optional and only warned about: without it runs index fine and
+simply have no video.
 
 There is nothing to build. The service is a single `.cs` file with no project file,
 and the gallery is two static assets beside it.
-
-One wrinkle worth knowing about the plugin install: a plugin's path contains its
-version, so the generated wrapper is pinned to the version you installed from.
-Update the plugin and the wrapper will refuse to start with a message telling you
-to re-run `install.ps1`. That is deliberate. It beats silently running a copy of
-the service you did not mean to.
 
 ## What your project has to provide
 
@@ -126,21 +127,20 @@ Every one of those rules came from something that went wrong. The evidence is in
 Two audiences, and the directory boundary is what keeps them apart.
 
 ```
-.claude-plugin/    plugin and marketplace manifests; the repo root is the plugin
-
-skills/runbox/     the deliverable, copied whole into a project
+skills/runbox/     the payload, delivered whole into an agent's skills directory
   SKILL.md           the method, for an agent using runbox
   FINDINGS.md        the evidence behind the rules; ships on purpose
   install.ps1  reference/  tool/
 
+bin/  src/          the deposit CLI: agent targets, toolchain gate, copy
 AGENTS.md          invariants and traps, for an agent developing runbox
 test.ps1  tests/   the maintainer gate
 ```
 
-`AGENTS.md` must never reach a consuming project: installed there it is
+`AGENTS.md` must never reach a consuming project: delivered there it is
 instructions addressed to a different job, telling an agent how to maintain runbox
-when it should be using it. Keeping the deliverable in its own directory means that
-cannot happen by forgetting to update a list.
+when it should be using it. `skills/` is the entire payload, so that cannot happen
+by forgetting to update an exclusion list. A test asserts it.
 
 ## Developing runbox
 
@@ -148,7 +148,7 @@ cannot happen by forgetting to update a list.
 .\test.ps1
 ```
 
-Thirty-four self-contained integration tests. No game, no engine, no host project
+Forty self-contained integration tests. No game, no engine, no host project
 required. CI runs them on `windows-latest` under Windows PowerShell 5.1, which is
 deliberate: the traps recorded in `AGENTS.md` do not all reproduce on 7.
 

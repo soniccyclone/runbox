@@ -104,9 +104,9 @@ that pairs events abandon a sequence containing one.
 
 Windows only for now.
 
-Run the installer from inside the project you want to instrument. It works
-whether this skill was copied into that project or installed as a plugin, because
-it takes the target from the working directory rather than from its own location:
+Run the installer from inside the project you want to instrument. It works whether
+this skill was delivered into that project or installed globally, because it takes
+the target from the working directory rather than from its own location:
 
 ```powershell
 cd <the game project>
@@ -130,10 +130,9 @@ agnostic. Anything that can write a JSON file and an mp4 can drive this.
 ```
 
 **Use the wrapper, not a raw `dotnet run`.** It knows where this skill actually
-lives, which differs between a copied-in skill and a plugin, and a plugin's path
-carries its version. If the wrapper says runbox is not where it was installed
-from, the skill moved or updated: re-run `install.ps1` and it will be correct
-again.
+lives, which differs between a project-local and a global install. If the wrapper
+says runbox is not where it was installed from, the skill moved or was updated:
+re-run `install.ps1` and it will be correct again.
 
 For the export, which has no wrapper:
 

@@ -2,10 +2,11 @@
   The installer is the whole of "installable", so it is tested like a surface
   rather than trusted like a script.
 
-  The case that earns most of this file is the plugin one. Installed as a plugin
-  the skill sits outside the project entirely, so a target derived from the
-  script's own location lands in the plugin cache and the generated wrapper
-  points at a path that does not exist. Both shapes are exercised here.
+  Two shapes, and the second is what earns this file. A deposit into the project
+  puts the skill under .claude\skills (or .cursor, or .github). A --global
+  deposit puts it in the home directory, outside the project entirely, so a
+  target derived from the script's own location lands in the wrong repo and the
+  generated wrapper points at a path that does not exist. Both are exercised.
 #>
 
 Register-Test 'Install :: targets the project the caller is standing in' {
@@ -37,19 +38,21 @@ Register-Test 'Install :: a copied-in skill is referenced relatively' {
 
 Register-Test 'Install :: a skill outside the project is referenced absolutely' {
     $proj = New-TempTree 'inst-abs'
-    $cache = New-TempTree 'inst-cache'
+    $home_ = New-TempTree 'inst-home'
     try {
         New-FakeProject $proj
-        # What a plugin install looks like: the skill is not in the project at all.
-        $skill = Join-Path $cache 'runbox'
+        # What a --global deposit looks like: the skill is not in the project.
+        $skill = Join-Path $home_ '.claude\skills\runbox'
+        [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $skill))
         Copy-Item (Get-SkillRoot) $skill -Recurse
+
         Invoke-Installer -Skill $skill -From $proj | Out-Null
 
         $wrapper = Join-Path $proj 'harness\serve.ps1'
         $resolved = Resolve-WrapperServe $wrapper $proj
-        Assert-True (Test-Path $resolved) 'a plugin-installed skill has no relative form, so the wrapper must carry the real path'
-        Assert-Contains $resolved $cache 'and it must point back at the plugin, not into the project'
-    } finally { Remove-TempTree $proj; Remove-TempTree $cache }
+        Assert-True (Test-Path $resolved) 'a globally installed skill has no relative form, so the wrapper must carry the real path'
+        Assert-Contains $resolved $home_ 'and it must point back at the skill, not into the project'
+    } finally { Remove-TempTree $proj; Remove-TempTree $home_ }
 }
 
 Register-Test 'Install :: refuses to install runbox into runbox' {

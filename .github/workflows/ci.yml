@@ -17,6 +17,12 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The deposit tests drive bin/runbox.js the way npx does, so the suite
+      # needs a Node the package declares support for.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       # The suite starts the service as a file-based app, so the first `dotnet run`
       # pays for the whole restore inside a test's startup timeout. Warm it here
       # instead, where a slow package feed is a build failure rather than a flake.

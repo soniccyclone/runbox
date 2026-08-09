@@ -125,6 +125,49 @@ function Invoke-Json {
 
 # ---- fixtures -----------------------------------------------------------
 
+# ---- deposit (the npx CLI) ----------------------------------------------
+
+function Get-BinEntry { Join-Path (Get-RepoRoot) 'bin\runbox.js' }
+
+<#
+  Run the deposit CLI the way `npx github:soniccyclone/runbox init` does:
+  standing in the project, naming targets explicitly so nothing prompts.
+
+  Returns the captured output; throws on a non-zero exit, because a deposit
+  that half-failed must not look like a pass.
+#>
+function Invoke-Deposit {
+    param(
+        [Parameter(Mandatory)][string]$In,
+        [string[]]$Agents = @('claude'),
+        [switch]$AllowFailure
+    )
+    $a = @((Get-BinEntry), 'init')
+    foreach ($t in $Agents) { $a += @('--agent', $t) }
+    Push-Location $In
+    # MEASURED: `2>&1` on a native executable wraps each stderr line in an
+    # ErrorRecord on PowerShell 5.1, which throws under ErrorActionPreference
+    # Stop. The CLI reporting a bad target on stderr then looks identical to the
+    # CLI crashing. Capture both streams to files instead.
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $so = [IO.Path]::GetTempFileName()
+    $se = [IO.Path]::GetTempFileName()
+    try {
+        $p = Start-Process node -ArgumentList $a -NoNewWindow -Wait -PassThru `
+            -RedirectStandardOutput $so -RedirectStandardError $se
+        $out = [IO.File]::ReadAllText($so) + [IO.File]::ReadAllText($se)
+        if ($p.ExitCode -ne 0 -and -not $AllowFailure) {
+            throw "deposit failed ($($p.ExitCode)): $out"
+        }
+        return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out }
+    } finally {
+        $ErrorActionPreference = $prev
+        Remove-Item $so, $se -Force -ErrorAction SilentlyContinue
+        Pop-Location
+    }
+}
+
 # ---- installer fixtures -------------------------------------------------
 
 <#

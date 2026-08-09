@@ -23,7 +23,7 @@ deliberately absent.
 .\test.ps1 -Name '*drift*' # one case
 ```
 
-Thirty-four integration tests, self-contained. Every case builds its own run tree
+Forty integration tests, self-contained. Every case builds its own run tree
 in a temp directory and points the service at it with `--out`, so the suite runs
 in this repo with no game, no engine, and nothing installed but .NET.
 
@@ -44,32 +44,35 @@ Two audiences, kept apart by where files live rather than by a list someone has 
 remember to update.
 
 ```
-.claude-plugin/    plugin.json and marketplace.json. The repo root is the plugin.
+skills/            THE PAYLOAD. Everything in here is delivered, verbatim.
+  runbox/            SKILL.md  FINDINGS.md  install.ps1  reference/  tool/
 
-skills/runbox/     ships. Copied whole into <project>/.claude/skills/runbox
-  SKILL.md  FINDINGS.md  install.ps1  reference/  tool/
-
+bin/  src/          the deposit CLI. Ships in the npm package, not to projects.
 AGENTS.md          stays. So do README.md, test.ps1, tests/, .github/
 ```
 
-Claude Code discovers skills at `.claude/skills/<name>/SKILL.md`, so the installed
-shape is fixed. Putting the deliverable in its own directory makes the installed
-shape a subtree of the repo shape, and the separation survives someone adding a
-file without thinking about packaging.
+Agents disagree about where skills live, so `src/targets.js` owns one path per
+agent and `src/install.js` copies the payload into each. Detection ranks the
+selection list and never gates it: somebody installing runbox before their editor
+must not be locked out.
 
-**A plugin install copies the whole repo into the plugin cache**, workshop and
-all, so `AGENTS.md` is present on disk there. It is not *loaded*: only `skills/`,
-`agents/`, `commands/` and hooks are components, and `claude plugin details`
-reports one skill and nothing else. The directory split is still what keeps this
-file out of a project that copied the skill in, which is the case that matters.
+**`skills/` is the payload boundary, and it is the whole packaging mechanism.**
+There is no exclusion list to keep in sync, which is exactly why there used to be
+bugs here. Anything you add outside `skills/` stays in the repo; anything you add
+inside it reaches every project that installs runbox. `Deposit :: ships the
+deliverable and nothing else` is the test that holds this, and it names both
+directions.
 
-Verify packaging changes with the real tool rather than by reading the manifests:
+**Adding an agent** means a `TARGETS` entry with its own `skillsDir`,
+`globalSkillsDir` and `detect` markers, plus a line in the README table and the
+path assertion in `Deposit :: every agent gets its own path`. Copilot is the one
+worth reading first: it is detected by files under `.github` but reads skills from
+`.github/skills`, so detection and destination are genuinely different fields.
 
-```powershell
-claude plugin validate .claude-plugin/plugin.json
-claude plugin validate .claude-plugin/marketplace.json
-claude plugin marketplace add ./   # then install, check details, then remove
-```
+**`init` gates on the toolchain before writing anything.** Depositing a skill
+whose service cannot start leaves an agent following instructions that fail for
+reasons the method has nothing to do with. Windows and .NET 10 are hard failures;
+ffmpeg is a warning, because runs index fine without clips.
 
 `FINDINGS.md` ships on purpose. The rules in `SKILL.md` read as arbitrary without
 their evidence, and an agent that cannot see why "never emit a calibration
@@ -112,18 +115,18 @@ routinely.
 **A first run reports no delta, not a delta of zero.** Zero reads as "no change",
 which is a different claim from "nothing to compare against".
 
-**The installer takes its target from the working directory, never from
-`$PSScriptRoot`.** Installed as a plugin the skill is not inside the project at
-all, so walking up from the script finds the plugin cache. Walking up from where
-the operator is standing finds the project under both installs. A test covers each
-shape, including one that copies the skill outside the project on purpose.
+**`install.ps1` takes its target from the working directory, never from
+`$PSScriptRoot`.** After a `--global` deposit the skill lives in the home
+directory, not in the project, so walking up from the script finds the wrong repo
+or none. Walking up from where the operator is standing finds the project under
+either deposit. A test covers each shape.
 
 **The generated wrapper is relative when the skill is inside the project and
 absolute when it is not.** Relative survives the project being cloned elsewhere;
-a plugin path has no relative form. The wrapper checks that its `serve.cs` still
-exists and throws if not, because a plugin path carries a version and an update
-invalidates it. Failing loudly there is the point: the alternative is running a
-version of the service nobody chose.
+a path outside the project has no relative form. The wrapper checks that its
+`serve.cs` still exists and throws if not, because a global skill can be moved or
+updated out from under it. Failing loudly there is the point: the alternative is
+running a version of the service nobody chose.
 
 **Nothing uploads anything.** The whole point is that unreleased game design stays
 on the machine that produced it. The export is a local file. If a change would
@@ -139,6 +142,13 @@ when the route is called, because reflection-based serialisation is unavailable
 here. Six routes broke at once with bare 500s and no stack, because logging
 providers are cleared. **Build every response as a `JsonNode` and return it via the
 `Json()` helper.** Never reintroduce `Results.Json`.
+
+**`2>&1` on a native executable throws under `ErrorActionPreference = 'Stop'`.**
+PowerShell 5.1 wraps each stderr line in a `NativeCommandError` record, so a CLI
+writing a perfectly good diagnostic to stderr is indistinguishable from a crash.
+Testing that `init` rejects an unknown agent failed for exactly this reason while
+the CLI was correct. `Invoke-Deposit` redirects both streams to files through
+`Start-Process` instead.
 
 **PowerShell 5.1 cannot set a `Range` header** via `Invoke-WebRequest -Headers`. It
 throws in a way indistinguishable from a server with no range support. Use
