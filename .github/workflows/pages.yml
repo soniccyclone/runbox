@@ -3,12 +3,14 @@ name: Publish site
 on:
   push:
     branches: [main]
-    paths:
-      - 'site/**'
-      - 'skills/**'
-      - 'README.md'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
+
+# No `paths:` filter. There was one, listing site/**, skills/** and README.md,
+# and it was wrong twice over: the site also reflects package.json and anything
+# else the build reads, and a push that legitimately changes nothing visible
+# still looks like a stuck deploy while you work out why no run appeared. The
+# build takes about a minute. Rebuilding every time is cheaper than the
+# confusion.
 
 permissions:
   contents: read

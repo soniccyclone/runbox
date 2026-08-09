@@ -124,4 +124,45 @@ else
   exit 1
 fi
 
+# The export carries no navigation, and must not: it is a standalone file handed
+# to someone with no repo, where a link to ./index.html would be dead. Published
+# on the site it is a different thing, and without a way back it is a dead end.
+# So the bar is injected into the published copy here, leaving export.ps1 and
+# everyone's own exports alone.
+cat > gen/sitebar.html <<'BAR'
+<style>
+  .sitebar {
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    max-width:1000px; margin:0 auto; padding:10px 16px 0;
+    font-family:"Consolas","Lucida Console",monospace; font-size:10px;
+    letter-spacing:.18em; text-transform:uppercase; color:#6E6E7A;
+  }
+  .sitebar a { color:#9A9AA6; text-decoration:none; border-bottom:1px solid rgba(255,176,0,.25); }
+  .sitebar a:hover { color:#FFB000; border-bottom-color:#FFB000; }
+  .sitebar .what { color:#5C5C68; letter-spacing:.10em; text-transform:none; font-size:11px; }
+  .sitebar .right { margin-left:auto; display:flex; gap:14px; }
+</style>
+<div class="sitebar">
+  <a href="./index.html">&#8592; runbox</a>
+  <span class="what">A real export of three recorded runs, not a mock-up.</span>
+  <!-- Internal links only. The published demo is otherwise byte-identical to
+       an export, and check.js asserts it pulls nothing from the network; an
+       outbound link here would force that assertion to be weakened. Docs
+       carries the GitHub link. -->
+  <span class="right">
+    <a href="./docs.html">Docs</a>
+    <a href="./run-contract.html">Run contract</a>
+  </span>
+</div>
+BAR
+
+awk 'NR==FNR { bar = bar $0 ORS; next }
+     !done && /^<body>$/ { print; printf "%s", bar; done = 1; next }
+     { print }' gen/sitebar.html www/demo.html > gen/demo.html
+grep -q 'class="sitebar"' gen/demo.html || {
+  echo "build: could not inject the demo nav bar; the gallery's <body> moved" >&2
+  exit 1
+}
+mv gen/demo.html www/demo.html
+
 echo "build: $(find www -name '*.html' | wc -l) pages"

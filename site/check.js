@@ -40,6 +40,14 @@ for (const page of pages) {
   }
 }
 
+// Resolving links is not the same as having any. demo.html shipped with none at
+// all: the export is deliberately navigation-free, and nothing noticed that the
+// published copy inherits that and becomes a dead end. Every page must offer a
+// way back to the splash.
+for (const page of pages.filter((p) => p !== 'index.html')) {
+  check(read(page).includes('href="./index.html"'), `${page}: no way back to index.html`);
+}
+
 // The demo is published to the open web, so the export's core promise has to
 // hold here too: one file, no network. Strip data: URIs first, since those
 // contain no host.
