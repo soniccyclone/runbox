@@ -2,10 +2,10 @@
 
 > **Scope: the runbox repository only.**
 >
-> This file governs an agent developing runbox. It is **not** installed into
-> projects that consume the skill, and `package.ps1` deliberately excludes it. If
-> you are reading this inside a game project, something copied more than the
-> deliverable and you should ignore this file entirely.
+> This file governs an agent developing runbox. It lives at the repo root, outside
+> `skills/runbox/`, so it is **not** installed into projects that consume the
+> skill. If you are reading this inside a game project, something copied more than
+> the deliverable and you should ignore this file entirely.
 
 Instructions for an agent **maintaining** runbox. If you are *using* runbox to
 iterate on a game, read `SKILL.md` instead; this file will mislead you.
@@ -30,8 +30,38 @@ in this repo with no game, no engine, and nothing installed but .NET.
 **If a test needs a host project, it is in the wrong repo.** A host repo tests its
 integration with runbox. This tests runbox.
 
-The suite is the specification. `reference/run-contract.md` describes the contract
-in prose, but the tests are what actually holds it.
+The suite is the specification. `skills/runbox/reference/run-contract.md` describes
+the contract in prose, but the tests are what actually holds it.
+
+CI runs the same suite on `windows-latest` pinned to `shell: powershell`. That pin
+is load-bearing: Windows PowerShell 5.1 is what Windows ships, and several traps
+below do not reproduce under 7. A suite green only on `pwsh` is green on a machine
+users do not have.
+
+## Layout: the deliverable and the workshop
+
+Two audiences, kept apart by where files live rather than by a list someone has to
+remember to update.
+
+```
+skills/runbox/     ships. Copied whole into <project>/.claude/skills/runbox
+  SKILL.md  FINDINGS.md  install.ps1  reference/  tool/
+
+AGENTS.md          stays. So do README.md, test.ps1, tests/, .github/
+```
+
+Claude Code discovers skills at `.claude/skills/<name>/SKILL.md`, so the installed
+shape is fixed. Putting the deliverable in its own directory makes the installed
+shape a subtree of the repo shape, and the separation survives someone adding a
+file without thinking about packaging.
+
+`FINDINGS.md` ships on purpose. The rules in `SKILL.md` read as arbitrary without
+their evidence, and an agent that cannot see why "never emit a calibration
+constant" exists will eventually fit one.
+
+**Anything new goes at the root unless a consuming project needs it at runtime.**
+When adding to `skills/runbox/`, ask whether it makes sense to an agent who has
+only that directory and a game.
 
 ## Invariants. Do not relax these without evidence
 
@@ -137,7 +167,8 @@ changes as expensive.
 - **Changing a default** is a breaking change even when nothing errors, because a
   host repo's numbers move silently. The platformer defaults on `measure` exist for
   exactly this reason.
-- **Removing a field** needs a version note in `reference/run-contract.md`.
+- **Removing a field** needs a version note in
+  `skills/runbox/reference/run-contract.md`.
 
 Update the contract doc and the tests in the same commit as the code. The doc is
 what people read; the tests are what holds.

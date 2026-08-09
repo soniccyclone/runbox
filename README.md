@@ -14,12 +14,23 @@ JSON file and an mp4, it can drive this.
 
 ## Install
 
-Copy this directory into a repo's `.claude/skills/`, then:
+Copy the skill into the repo you want to instrument, then run its installer from
+there:
 
 ```powershell
+git clone https://github.com/soniccyclone/runbox
+mkdir <your-game>\.claude\skills
+cp -r runbox\skills\runbox <your-game>\.claude\skills\runbox
+
+cd <your-game>
 .\.claude\skills\runbox\install.ps1 -Launch "godot --path {game}"
 .\harness\serve.ps1
 ```
+
+The installer writes a `harness\serve.ps1` wrapper, adds run output to your
+`.gitignore`, checks the toolchain, and prints what your project still owes. It
+refuses to run inside this repo, because that would install runbox into its own
+source.
 
 Requires the .NET SDK (10.x, for file-based apps). ffmpeg is optional; without it
 runs index fine and simply have no video.
@@ -51,7 +62,7 @@ delta table are all derived from whatever kinds your runs contain, so `hit` and
 `reload` work exactly as well as `jump` and `land`.
 
 Full contract, including `claims`, `measure` and `counts`:
-[reference/run-contract.md](reference/run-contract.md).
+[skills/runbox/reference/run-contract.md](skills/runbox/reference/run-contract.md).
 
 ## The one hard requirement
 
@@ -82,13 +93,32 @@ This is far cheaper to build in from the start than to retrofit.
 
 ## Method
 
-The tool is half of it. `SKILL.md` carries the method: change exactly one thing per
-run, measure rather than derive, never fit a calibration constant, adapt content to
-measured capability and never the reverse, and treat the human verdict as the one
-datum that cannot be regenerated.
+The tool is half of it. [skills/runbox/SKILL.md](skills/runbox/SKILL.md) carries
+the method: change exactly one thing per run, measure rather than derive, never fit
+a calibration constant, adapt content to measured capability and never the reverse,
+and treat the human verdict as the one datum that cannot be regenerated.
 
 Every one of those rules came from something that went wrong. The evidence is in
-[FINDINGS.md](FINDINGS.md).
+[skills/runbox/FINDINGS.md](skills/runbox/FINDINGS.md).
+
+## Repository layout
+
+Two audiences, and the directory boundary is what keeps them apart.
+
+```
+skills/runbox/     the deliverable, copied whole into a project
+  SKILL.md           the method, for an agent using runbox
+  FINDINGS.md        the evidence behind the rules; ships on purpose
+  install.ps1  reference/  tool/
+
+AGENTS.md          invariants and traps, for an agent developing runbox
+test.ps1  tests/   the maintainer gate
+```
+
+`AGENTS.md` must never reach a consuming project: installed there it is
+instructions addressed to a different job, telling an agent how to maintain runbox
+when it should be using it. Keeping the deliverable in its own directory means that
+cannot happen by forgetting to update a list.
 
 ## Developing runbox
 
@@ -97,10 +127,17 @@ Every one of those rules came from something that went wrong. The evidence is in
 ```
 
 Twenty-five self-contained integration tests. No game, no engine, no host project
-required. Read [AGENTS.md](AGENTS.md) first: it lists the invariants that look
-arbitrary and are not, and the traps this codebase has already fallen into.
+required. CI runs them on `windows-latest` under Windows PowerShell 5.1, which is
+deliberate: the traps recorded in `AGENTS.md` do not all reproduce on 7.
+
+Read [AGENTS.md](AGENTS.md) first. It lists the invariants that look arbitrary and
+are not, and the traps this codebase has already fallen into.
 
 ## Design in one line
 
 Measurement is the authority, a derived constant is a claim, and the only thing a
 machine cannot produce is whether it was fun.
+
+## License
+
+Apache 2.0. See [LICENSE](LICENSE).

@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The suite starts the service as a file-based app, so the first `dotnet run`
+      # pays for the whole restore inside a test's startup timeout. Warm it here
+      # instead, where a slow package feed is a build failure rather than a flake.
+      - name: Warm the SDK
+        shell: powershell
+        run: dotnet --info
+
+      # MUST be `powershell` (5.1), not `pwsh`. Windows PowerShell is what ships
+      # with Windows and is what the traps in AGENTS.md were found on: the Range
+      # header, Start-Process quoting, and the utf8 BOM behaviour all differ in 7.
+      # A suite that is only green on pwsh is green on a machine users do not have.
+      - name: Test
+        shell: powershell
+        run: .\test.ps1

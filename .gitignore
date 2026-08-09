@@ -1,0 +1,14 @@
+# Staged deliverable, if anyone still runs a package step by hand.
+dist/
+
+# Run output and verdicts, in case runbox is ever pointed at this repo.
+.harness-out/
+.harness-verdicts.json
+harness/
+
+# Exports are generated artefacts.
+*.runbox.html
+
+# .NET file-based apps still leave these behind.
+bin/
+obj/

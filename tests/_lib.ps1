@@ -42,7 +42,12 @@ function Assert-NotContains {
 
 # ---- locations ----------------------------------------------------------
 
-function Get-SkillRoot { Split-Path -Parent $PSScriptRoot }
+# The workshop lives at the repo root and the deliverable lives under
+# skills/runbox, so that a consuming project can copy the skill directory whole
+# without dragging the tests and the maintainer docs along with it. That split is
+# why this is not simply the parent directory.
+function Get-RepoRoot  { Split-Path -Parent $PSScriptRoot }
+function Get-SkillRoot { Join-Path (Get-RepoRoot) 'skills\runbox' }
 function Get-ToolDir   { Join-Path (Get-SkillRoot) 'tool' }
 function Get-FixtureClip { Join-Path $PSScriptRoot 'fixtures\sample-clip.mp4' }
 

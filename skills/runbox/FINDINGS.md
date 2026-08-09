@@ -1,7 +1,7 @@
 # Findings
 
-Why runbox is shaped the way it is. Every rule in `SKILL.md` and every invariant in
-`AGENTS.md` traces to something measured here.
+Why runbox is shaped the way it is. Every rule in `SKILL.md` traces to something
+measured here.
 
 This file exists because the rules do not look necessary from the outside. Without
 the evidence, a reasonable person simplifies them away and reintroduces the bug.
